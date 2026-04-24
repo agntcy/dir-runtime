@@ -1,0 +1,12 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+module-sets:
+  dir-runtime:
+    version: v1.0.0
+    modules:
+      - github.com/agntcy/dir-runtime/api
+      - github.com/agntcy/dir-runtime/discovery
+      - github.com/agntcy/dir-runtime/server
+      - github.com/agntcy/dir-runtime/store
+      - github.com/agntcy/dir-runtime/utils

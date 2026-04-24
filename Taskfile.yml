@@ -30,6 +30,9 @@ vars:
   LICENSEI_VERSION: "0.9.0"
   LICENSEI_BIN: "{{ .BIN_DIR }}/licensei-{{.LICENSEI_VERSION}}"
 
+  MULTIMOD_VERSION: "0.29.0"
+  MULTIMOD_BIN: "{{ .BIN_DIR }}/multimod-{{.MULTIMOD_VERSION}}"
+
   BAKE_ENV: 'IMAGE_REPO={{ .IMAGE_REPO }} IMAGE_TAG={{ .IMAGE_TAG }}'
   IMAGE_BAKE_OPTS: "--file=docker-bake.hcl"
 
@@ -182,6 +185,12 @@ tasks:
   ## Dependency management
   ##
 
+  deps:tidy:
+    desc: Tidy all Go module dependencies
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: go -C {{.ITEM}} mod tidy -go={{.GO_VERSION}}
+
   deps:bin-dir:
     desc: Create bin directory
     run: once
@@ -239,6 +248,59 @@ tasks:
       - chmod +x {{.LICENSEI_BIN}}
     status:
       - test -x {{.LICENSEI_BIN}}
+
+  deps:multimod-bin:
+    desc: Build the multimod binary
+    internal: true
+    deps:
+      - deps:bin-dir
+    vars:
+      MULTIMOD_REPO_DIR: "{{ .BIN_DIR }}/opentelemetry-go-build-tools"
+    cmds:
+      - git clone https://github.com/open-telemetry/opentelemetry-go-build-tools --branch multimod/v{{.MULTIMOD_VERSION}} {{.MULTIMOD_REPO_DIR}}
+      - go build -C {{.MULTIMOD_REPO_DIR}}/multimod -o {{.MULTIMOD_BIN}} main.go
+      - rm -rf {{.MULTIMOD_REPO_DIR}}
+    status:
+      - test -x {{.MULTIMOD_BIN}}
+
+  ##
+  ## Release
+  ##
+
+  release:create:
+    desc: Prepare release
+    deps:
+      - task: deps:multimod-bin
+    vars:
+      RELEASE_VERSION: "{{ .RELEASE_VERSION }}"
+    cmds:
+      # Switch to new branch
+      - 'if [ "$(git rev-parse --abbrev-ref HEAD)" != "release/{{.RELEASE_VERSION}}" ]; then git checkout -b release/{{.RELEASE_VERSION}}; fi'
+      # Update versions.yaml with the new version
+      - "awk '{gsub(/version: .*/,\"version: {{.RELEASE_VERSION}}\")}1' versions.yaml > versions.yaml.tmp"
+      - "mv versions.yaml.tmp versions.yaml"
+      # Add release changes
+      - |
+        git add .
+        git commit -S --signoff -m "release(dir-runtime): prepare release {{.RELEASE_VERSION}}"
+      # Verify Go release
+      - |
+        {{ .MULTIMOD_BIN }} verify
+        {{ .MULTIMOD_BIN }} prerelease --all-module-sets --skip-go-mod-tidy=true --commit-to-different-branch=false
+      - |
+        git commit --amend -S --signoff -m "release(dir-runtime): prepare release {{.RELEASE_VERSION}}"
+      # Push prepared release
+      - task: release:push
+
+  release:push:
+    internal: true
+    vars:
+      RELEASE_VERSION: "{{ .RELEASE_VERSION }}"
+    prompt:
+      - "Are you sure you want to push the release branch release/{{.RELEASE_VERSION}} to remote repository?"
+    cmds:
+      - |
+        git push --set-upstream origin release/{{.RELEASE_VERSION}} || true
 
   ##
   ## Cleanup
