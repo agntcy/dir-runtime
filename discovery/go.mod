@@ -1,25 +1,22 @@
-module github.com/agntcy/dir/runtime/discovery
+module github.com/agntcy/dir-runtime/discovery
 
 go 1.26.2
 
 // Replace local modules
 replace (
-	github.com/agntcy/dir/api => ../../api
-	github.com/agntcy/dir/client => ../../client
-	github.com/agntcy/dir/runtime/api => ../api
-	github.com/agntcy/dir/runtime/store => ../store
-	github.com/agntcy/dir/runtime/utils => ../utils
-	github.com/agntcy/dir/utils => ../../utils
+	github.com/agntcy/dir-runtime/api => ../api
+	github.com/agntcy/dir-runtime/store => ../store
+	github.com/agntcy/dir-runtime/utils => ../utils
 )
 
 // Cosign does not updated the crypto11 owner
 replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.0
 
 require (
+	github.com/agntcy/dir-runtime/api v1.2.0
+	github.com/agntcy/dir-runtime/store v1.2.0
+	github.com/agntcy/dir-runtime/utils v1.2.0
 	github.com/agntcy/dir/client v1.2.0
-	github.com/agntcy/dir/runtime/api v1.2.0
-	github.com/agntcy/dir/runtime/store v1.2.0
-	github.com/agntcy/dir/runtime/utils v1.2.0
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/moby/moby/api v1.54.2
 	github.com/moby/moby/client v0.4.1
@@ -36,6 +33,7 @@ require (
 )
 
 require (
+	github.com/agntcy/dir/runtime/api v1.2.0 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
 	github.com/glebarez/sqlite v1.11.0 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect

@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
-	"github.com/agntcy/dir/runtime/discovery/types"
-	"github.com/agntcy/dir/runtime/utils"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	"github.com/agntcy/dir-runtime/discovery/types"
+	"github.com/agntcy/dir-runtime/utils"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/events"
 	"github.com/moby/moby/client"

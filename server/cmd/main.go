@@ -11,10 +11,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/agntcy/dir/runtime/server"
-	"github.com/agntcy/dir/runtime/server/config"
-	"github.com/agntcy/dir/runtime/store"
-	"github.com/agntcy/dir/runtime/utils"
+	"github.com/agntcy/dir-runtime/server"
+	"github.com/agntcy/dir-runtime/server/config"
+	"github.com/agntcy/dir-runtime/store"
+	"github.com/agntcy/dir-runtime/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )

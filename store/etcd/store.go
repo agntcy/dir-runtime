@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
-	"github.com/agntcy/dir/runtime/store/types"
-	"github.com/agntcy/dir/runtime/utils"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	"github.com/agntcy/dir-runtime/store/types"
+	"github.com/agntcy/dir-runtime/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 

@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
-	"github.com/agntcy/dir/runtime/discovery/types"
-	"github.com/agntcy/dir/runtime/utils"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	"github.com/agntcy/dir-runtime/discovery/types"
+	"github.com/agntcy/dir-runtime/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"

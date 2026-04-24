@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	store "github.com/agntcy/dir/runtime/store/config"
-	"github.com/agntcy/dir/runtime/store/crd"
-	"github.com/agntcy/dir/runtime/store/etcd"
+	store "github.com/agntcy/dir-runtime/store/config"
+	"github.com/agntcy/dir-runtime/store/crd"
+	"github.com/agntcy/dir-runtime/store/etcd"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )

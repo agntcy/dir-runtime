@@ -6,8 +6,8 @@ package grpc
 import (
 	"context"
 
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
-	"github.com/agntcy/dir/runtime/server/database"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	"github.com/agntcy/dir-runtime/server/database"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

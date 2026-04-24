@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/agntcy/dir/runtime/discovery/resolver/a2a"
-	"github.com/agntcy/dir/runtime/discovery/resolver/config"
-	"github.com/agntcy/dir/runtime/discovery/resolver/oasf"
-	"github.com/agntcy/dir/runtime/discovery/types"
+	"github.com/agntcy/dir-runtime/discovery/resolver/a2a"
+	"github.com/agntcy/dir-runtime/discovery/resolver/config"
+	"github.com/agntcy/dir-runtime/discovery/resolver/oasf"
+	"github.com/agntcy/dir-runtime/discovery/types"
 )
 
 func NewResolvers(ctx context.Context, cfg config.Config) ([]types.WorkloadResolver, error) {

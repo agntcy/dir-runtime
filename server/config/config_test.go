@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	store "github.com/agntcy/dir/runtime/store/config"
-	"github.com/agntcy/dir/runtime/store/crd"
-	"github.com/agntcy/dir/runtime/store/etcd"
+	store "github.com/agntcy/dir-runtime/store/config"
+	"github.com/agntcy/dir-runtime/store/crd"
+	"github.com/agntcy/dir-runtime/store/etcd"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

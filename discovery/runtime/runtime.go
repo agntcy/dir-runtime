@@ -6,10 +6,10 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/agntcy/dir/runtime/discovery/runtime/config"
-	"github.com/agntcy/dir/runtime/discovery/runtime/docker"
-	"github.com/agntcy/dir/runtime/discovery/runtime/k8s"
-	"github.com/agntcy/dir/runtime/discovery/types"
+	"github.com/agntcy/dir-runtime/discovery/runtime/config"
+	"github.com/agntcy/dir-runtime/discovery/runtime/docker"
+	"github.com/agntcy/dir-runtime/discovery/runtime/k8s"
+	"github.com/agntcy/dir-runtime/discovery/types"
 )
 
 //nolint:wrapcheck

@@ -9,7 +9,7 @@ tasks:
 
   runtime:gen:
     desc: Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations
-    dir: ./runtime/api
+    dir: ./api
     deps:
       - deps:controller-gen
     cmds:

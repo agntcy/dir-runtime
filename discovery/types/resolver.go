@@ -6,7 +6,7 @@ package types
 import (
 	"context"
 
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
 )
 
 type WorkloadResolverType string

@@ -6,11 +6,11 @@ package store
 import (
 	"fmt"
 
-	"github.com/agntcy/dir/runtime/store/config"
-	"github.com/agntcy/dir/runtime/store/crd"
-	"github.com/agntcy/dir/runtime/store/etcd"
-	"github.com/agntcy/dir/runtime/store/sql"
-	"github.com/agntcy/dir/runtime/store/types"
+	"github.com/agntcy/dir-runtime/store/config"
+	"github.com/agntcy/dir-runtime/store/crd"
+	"github.com/agntcy/dir-runtime/store/etcd"
+	"github.com/agntcy/dir-runtime/store/sql"
+	"github.com/agntcy/dir-runtime/store/types"
 )
 
 // New creates a new store based on configuration.

@@ -4,8 +4,8 @@
 package config
 
 import (
-	"github.com/agntcy/dir/runtime/discovery/resolver/a2a"
-	"github.com/agntcy/dir/runtime/discovery/resolver/oasf"
+	"github.com/agntcy/dir-runtime/discovery/resolver/a2a"
+	"github.com/agntcy/dir-runtime/discovery/resolver/oasf"
 )
 
 // Config holds all resolver-specific configuration.

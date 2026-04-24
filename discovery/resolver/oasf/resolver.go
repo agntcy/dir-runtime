@@ -12,9 +12,9 @@ import (
 	corev1 "github.com/agntcy/dir/api/core/v1"
 	signv1 "github.com/agntcy/dir/api/sign/v1"
 	"github.com/agntcy/dir/client"
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
-	"github.com/agntcy/dir/runtime/discovery/types"
-	"github.com/agntcy/dir/runtime/utils"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	"github.com/agntcy/dir-runtime/discovery/types"
+	"github.com/agntcy/dir-runtime/utils"
 )
 
 const ResolverType types.WorkloadResolverType = "oasf"

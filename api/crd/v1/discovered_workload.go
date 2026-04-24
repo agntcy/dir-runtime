@@ -4,7 +4,7 @@
 package v1
 
 import (
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

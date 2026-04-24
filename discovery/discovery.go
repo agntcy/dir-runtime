@@ -11,14 +11,14 @@ import (
 	"sync"
 	"time"
 
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
-	"github.com/agntcy/dir/runtime/discovery/config"
-	"github.com/agntcy/dir/runtime/discovery/resolver"
-	"github.com/agntcy/dir/runtime/discovery/runtime"
-	"github.com/agntcy/dir/runtime/discovery/types"
-	"github.com/agntcy/dir/runtime/store"
-	storetypes "github.com/agntcy/dir/runtime/store/types"
-	"github.com/agntcy/dir/runtime/utils"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	"github.com/agntcy/dir-runtime/discovery/config"
+	"github.com/agntcy/dir-runtime/discovery/resolver"
+	"github.com/agntcy/dir-runtime/discovery/runtime"
+	"github.com/agntcy/dir-runtime/discovery/types"
+	"github.com/agntcy/dir-runtime/store"
+	storetypes "github.com/agntcy/dir-runtime/store/types"
+	"github.com/agntcy/dir-runtime/utils"
 )
 
 const (

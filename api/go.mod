@@ -1,4 +1,4 @@
-module github.com/agntcy/dir/runtime/api
+module github.com/agntcy/dir-runtime/api
 
 go 1.26.2
 

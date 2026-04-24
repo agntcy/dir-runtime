@@ -45,6 +45,14 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/ThalesGroup/crypto11 v1.6.0 h1:Og9EMn44fBS4GNnGnH1aqHnF2wL6F7IU/RhpJajWX/4=
 github.com/ThalesGroup/crypto11 v1.6.0/go.mod h1:H6LRjN5R5SHxTrLqGNteisLDI0/IC6+SGx1pHtbwizE=
+github.com/agntcy/dir/api v1.2.0 h1:oaZAEK6UHdNubIwLh8rrnUGAbVKxaLDxiEe8dh7ytR8=
+github.com/agntcy/dir/api v1.2.0/go.mod h1:p8cWV9WYhGP4GgXL6pZPgvZ2jA3a35rqvaY3j0b2Jvk=
+github.com/agntcy/dir/client v1.2.0 h1:UeCyTWyOx3CNZ8MC0OQZdvcEDt3fu5Eq0WzvuIE6w18=
+github.com/agntcy/dir/client v1.2.0/go.mod h1:s9xz1uNRTZmJnJbjo8Rl/Gs4xn9ZuC5YNSDJq+VRIP4=
+github.com/agntcy/dir/runtime/api v1.2.0 h1:5tYZHDSjrPo1s3XRJn0wga9KF13fXyAt67+ZXC3zByk=
+github.com/agntcy/dir/runtime/api v1.2.0/go.mod h1:Upn4Q4SjOyT3VCDPOZiwExpyeEQOnLmkhCSLymQjqZA=
+github.com/agntcy/dir/utils v1.2.0 h1:pIn0SKlTU6+amP9NanMd/i5zY5FbE2NLRtdh8S8n/jQ=
+github.com/agntcy/dir/utils v1.2.0/go.mod h1:jMRLnKwADp03nGlohsDM+NlB5BF5urlfkFxhSbBIhV8=
 github.com/agntcy/oasf-sdk/pkg v1.0.5 h1:Sv8K9tqdfl4gfl30spFh9MYkqnzXcTByCsb2uZsNWE4=
 github.com/agntcy/oasf-sdk/pkg v1.0.5/go.mod h1:6dii5LpZlAPNhko78tvD2LOhJ2qwOXDy95aSjrsJbgg=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=

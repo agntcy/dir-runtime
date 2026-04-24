@@ -4,9 +4,9 @@
 package config
 
 import (
-	"github.com/agntcy/dir/runtime/discovery/runtime/docker"
-	"github.com/agntcy/dir/runtime/discovery/runtime/k8s"
-	"github.com/agntcy/dir/runtime/discovery/types"
+	"github.com/agntcy/dir-runtime/discovery/runtime/docker"
+	"github.com/agntcy/dir-runtime/discovery/runtime/k8s"
+	"github.com/agntcy/dir-runtime/discovery/types"
 )
 
 // Config holds all runtime-specific configuration.

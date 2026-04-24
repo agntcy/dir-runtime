@@ -4,9 +4,9 @@
 package config
 
 import (
-	"github.com/agntcy/dir/runtime/store/crd"
-	"github.com/agntcy/dir/runtime/store/etcd"
-	"github.com/agntcy/dir/runtime/store/types"
+	"github.com/agntcy/dir-runtime/store/crd"
+	"github.com/agntcy/dir-runtime/store/etcd"
+	"github.com/agntcy/dir-runtime/store/types"
 )
 
 // Config holds storage configuration.

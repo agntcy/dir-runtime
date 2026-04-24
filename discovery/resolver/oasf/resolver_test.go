@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
 )
 
 func TestResolverType(t *testing.T) {

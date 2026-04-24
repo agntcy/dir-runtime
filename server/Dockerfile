@@ -18,7 +18,7 @@ RUN --mount=type=cache,id=${TARGETPLATFORM}-apt,target=/var/cache/apt,sharing=lo
     gcc \
     libc6-dev
 
-WORKDIR /build/runtime/server
+WORKDIR /build/server
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

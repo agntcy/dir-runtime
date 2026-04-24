@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/agntcy/dir/runtime/discovery"
-	"github.com/agntcy/dir/runtime/discovery/config"
-	"github.com/agntcy/dir/runtime/utils"
+	"github.com/agntcy/dir-runtime/discovery"
+	"github.com/agntcy/dir-runtime/discovery/config"
+	"github.com/agntcy/dir-runtime/utils"
 )
 
 var logger = utils.NewLogger("runtime", "discovery")

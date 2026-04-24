@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	runtimev1 "github.com/agntcy/dir/runtime/api/runtime/v1"
+	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
 )
 
 func TestNewResolver(t *testing.T) {
