@@ -5,19 +5,19 @@ repository:
   # See https://developer.github.com/v3/repos/#edit for all available settings.
 
   # The name of the repository. Changing this will rename the repository
-  name: repo-template
+  name: dir-runtime
 
   # A short description of the repository that will show up on GitHub
-  description: Agntcy Project Repo Template
+  description: Directory Runtime - Discovery service to watch workloads and resolve capabilities
 
   # A URL with more information about the repository
-  homepage: https://www.example.com
+  homepage: https://docs.agntcy.org/
 
   # A comma-separated list of topics to set on the repository
-  topics: github, probot
+  topics: agntcy, directory, runtime, discovery, agents
 
   # Either `true` to make the repository private, or `false` to make it public.
-  private: true
+  private: false
 
   # Either `true` to enable issues for this repository, `false` to disable them.
   has_issues: true
@@ -69,11 +69,11 @@ repository:
 #   #   repository without access to sensitive or destructive actions.
 #   # * `triage` - Recommended for contributors who need to proactively manage
 #   #   issues and pull requests without write access.
-#   - name: <project-name-admins>
+#   - name: dir-runtime-admins
 #     permission: admin
-#   - name: <project-name-maintainers>
+#   - name: dir-runtime-maintainers
 #     permission: maintain
-#   - name: <project-name>
+#   - name: dir-runtime
 #     permission: triage
 
 # TODO: Enable this section once repository has been created & no further modifications are needed

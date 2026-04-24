@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 ---
 name: Bug Report
 description: Report a bug to help us improve.
@@ -22,21 +25,16 @@ body:
       description: Please describe what you expected would happen
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: version
     attributes:
       label: Affected Version
       description: |
-        If applicable, provide the version number or release tag where this
-        issue was encountered
-      options:
-        - v1.0.0
-        - v1.0.1
-        - v1.0.2
-        - v1.0.3
-      default: 0
+        Please specify the version where this issue was encountered.
+        You can find all releases at: https://github.com/agntcy/dir-runtime/releases
+      placeholder: "e.g., v1.0.0 or main"
     validations:
-      required: false
+      required: true
   - type: textarea
     id: steps
     attributes:
@@ -55,7 +53,7 @@ body:
       label: Checklist
       description: By submitting this issue, you agree to the following
       options:
-        - label: I have read the [contributing guidelines](/agntcy/repo-template/blob/main/CONTRIBUTING.md)
+        - label: I have read the [contributing guidelines](/agntcy/dir-runtime/blob/main/CONTRIBUTING.md)
           required: true
         - label: I have verified this does not duplicate an existing issue
           required: true
