@@ -8,6 +8,11 @@ env:
 
 vars:
   BIN_DIR: "{{ .ROOT_DIR }}/.bin"
+  ROOT_DIR:
+    sh: pwd
+  GO_VERSION: "1.26.2"
+  IMAGE_REPO: '{{ .IMAGE_REPO | default "ghcr.io/agntcy" }}'
+  IMAGE_TAG: '{{ .IMAGE_TAG | default "latest" }}'
   GO_MODULES:
     sh: find . -name go.mod -not -path "./tmp*" -exec dirname {} \;
   GO_MODULES_UNIT_TEST:
@@ -24,6 +29,9 @@ vars:
 
   LICENSEI_VERSION: "0.9.0"
   LICENSEI_BIN: "{{ .BIN_DIR }}/licensei-{{.LICENSEI_VERSION}}"
+
+  BAKE_ENV: 'IMAGE_REPO={{ .IMAGE_REPO }} IMAGE_TAG={{ .IMAGE_TAG }}'
+  IMAGE_BAKE_OPTS: "--file=docker-bake.hcl"
 
 tasks:
   default:
@@ -57,6 +65,52 @@ tasks:
     desc: Generate code for all components
     cmds:
       - task: api:gen
+
+  ##
+  ## Build
+  ##
+
+  build:
+    desc: Build images for all components
+    vars:
+      GOARCH: "{{ .GOARCH | default ARCH }}"
+    cmds:
+      - '{{.BAKE_ENV}} docker buildx bake {{.IMAGE_BAKE_OPTS}} --set *.platform=linux/{{.GOARCH}}'
+
+  build:all:
+    desc: Build images for all components for multiple platforms
+    cmds:
+      - '{{.BAKE_ENV}} docker buildx bake {{.IMAGE_BAKE_OPTS}} --set *.platform=linux/amd64,linux/arm64'
+
+  push:
+    desc: Build and push images for all components
+    prompt:
+      - Are you sure you want to push the images to remote registry?
+    cmds:
+      - '{{.BAKE_ENV}} docker buildx bake {{.IMAGE_BAKE_OPTS}} --set=*.output=type=registry'
+
+  ##
+  ## Test
+  ##
+
+  test:unit:
+    desc: Run unit tests on all modules
+    aliases: [test]
+    env:
+      GOWORK: off
+    cmds:
+      - for: { var: GO_MODULES_UNIT_TEST }
+        cmd: |
+          echo "Running tests in {{.ITEM}}"
+          go -C {{.ITEM}} test ./...
+
+  test:unit:coverage:
+    desc: Run unit tests with coverage
+    cmds:
+      - for: { var: GO_MODULES_UNIT_TEST }
+        cmd: |
+          echo "Running coverage tests in {{.ITEM}}"
+          go -C {{.ITEM}} test -race -coverprofile=coverage.out ./...
 
   ##
   ## Linters
@@ -186,3 +240,11 @@ tasks:
     status:
       - test -x {{.LICENSEI_BIN}}
 
+  ##
+  ## Cleanup
+  ##
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf {{ .BIN_DIR }}
