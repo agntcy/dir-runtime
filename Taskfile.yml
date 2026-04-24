@@ -155,11 +155,18 @@ tasks:
     cmds:
       - "{{.BUFBUILD_BIN}} lint"
 
+  lint:helm:
+    desc: Run Helm linters
+    cmds:
+      - helm dependency update ./install/chart
+      - helm lint ./install/chart --with-subcharts
+
   lint:
     desc: Run all linters
     cmds:
       - task: lint:go
       - task: lint:buf
+      - task: lint:helm
 
   ##
   ## License
