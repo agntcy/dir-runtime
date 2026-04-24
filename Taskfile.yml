@@ -16,6 +16,9 @@ vars:
   GOLANGCI_LINT_VERSION: "2.11.3"
   GOLANGCI_LINT_BIN: "{{ .BIN_DIR }}/golangci-lint-{{.GOLANGCI_LINT_VERSION}}"
 
+  LICENSEI_VERSION: "0.9.0"
+  LICENSEI_BIN: "{{ .BIN_DIR }}/licensei-{{.LICENSEI_VERSION}}"
+
 tasks:
   default:
     cmd: echo "Run the main Taskfile instead of this one."
@@ -67,15 +70,35 @@ tasks:
       - task: lint:go
 
   ##
+  ## License
+  ##
+
+  license:
+    desc: Check licenses
+    deps:
+      - task: deps:licensei
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: echo "Running licensei in {{.ITEM}}" && cd {{.ITEM}} && {{ .LICENSEI_BIN }} check --config {{.ROOT_DIR}}/.licensei.toml
+
+  license:cache:
+    desc: Cache license information
+    deps:
+      - task: deps:licensei
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: echo "Running licensei in {{.ITEM}}" && cd {{.ITEM}} && {{ .LICENSEI_BIN }} cache --config {{.ROOT_DIR}}/.licensei.toml
+
+  ##
   ## Dependency management
   ##
 
   deps:bin-dir:
-  desc: Create bin directory
-  run: once
-  cmd: mkdir -p {{.BIN_DIR}}
-  status:
-    - test -d {{.BIN_DIR}}
+    desc: Create bin directory
+    run: once
+    cmd: mkdir -p {{.BIN_DIR}}
+    status:
+      - test -d {{.BIN_DIR}}
 
   deps:golangci-lint:
     desc: Install golangci-lint
@@ -88,3 +111,16 @@ tasks:
       - chmod +x {{.GOLANGCI_LINT_BIN}}
     status:
       - test -x {{.GOLANGCI_LINT_BIN}}
+
+  deps:licensei:
+    desc: Install licensei
+    internal: true
+    deps:
+      - deps:bin-dir
+    cmds:
+      - curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | sh -s -- -b {{.BIN_DIR}} v{{.LICENSEI_VERSION}}
+      - mv {{.BIN_DIR}}/licensei {{.LICENSEI_BIN}}
+      - chmod +x {{.LICENSEI_BIN}}
+    status:
+      - test -x {{.LICENSEI_BIN}}
+
