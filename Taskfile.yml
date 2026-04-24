@@ -13,6 +13,12 @@ vars:
   GO_MODULES_UNIT_TEST:
     sh: find . -name go.mod -not -path "./tmp*" -not -path "./tests*" -exec dirname {} \;
 
+  CONTROLLER_GEN_VERSION: "v0.17.3"
+  CONTROLLER_GEN_BIN: "sigs.k8s.io/controller-tools/cmd/controller-gen@{{ .CONTROLLER_GEN_VERSION }}"
+
+  BUFBUILD_VERSION: "1.66.1"
+  BUFBUILD_BIN: "{{ .BIN_DIR }}/bufbuild-{{.BUFBUILD_VERSION}}"
+
   GOLANGCI_LINT_VERSION: "2.11.3"
   GOLANGCI_LINT_BIN: "{{ .BIN_DIR }}/golangci-lint-{{.GOLANGCI_LINT_VERSION}}"
 
@@ -23,6 +29,21 @@ tasks:
   default:
     cmd: echo "Run the main Taskfile instead of this one."
 
+
+  ##
+  ## Code generation
+  ##
+
+  api:gen:
+    desc: Generate API stubs from proto files
+    dir: ./proto
+    deps:
+      - task: deps:bufbuild
+    cmds:
+      - "{{.BUFBUILD_BIN}} dep update"
+      - "{{.BUFBUILD_BIN}} generate --template buf.gen.yaml"
+      - task: runtime:gen
+
   runtime:gen:
     desc: Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations
     dir: ./api
@@ -31,6 +52,11 @@ tasks:
     cmds:
       - go run {{ .CONTROLLER_GEN_BIN }} object paths=./crd/v1/...
       - go run {{ .CONTROLLER_GEN_BIN }} crd:ignoreUnexportedFields=true object:headerFile="./crd/v1/boilerplate.go.txt" paths="./crd/v1/..." output:crd:artifacts:config="../install/chart/templates"
+
+  gen:
+    desc: Generate code for all components
+    cmds:
+      - task: api:gen
 
   ##
   ## Linters
@@ -64,10 +90,19 @@ tasks:
           (cd "$m" && {{ .GOLANGCI_LINT_BIN }} run --config {{ .ROOT_DIR }}/.golangci.yml{{if eq .FIX "true"}} --fix{{end}} --new-from-rev="{{ .REV }}")
         done
 
+  lint:buf:
+    desc: Run Buf linters
+    deps:
+      - task: deps:bufbuild
+    dir: ./proto
+    cmds:
+      - "{{.BUFBUILD_BIN}} lint"
+
   lint:
     desc: Run all linters
     cmds:
       - task: lint:go
+      - task: lint:buf
 
   ##
   ## License
@@ -99,6 +134,33 @@ tasks:
     cmd: mkdir -p {{.BIN_DIR}}
     status:
       - test -d {{.BIN_DIR}}
+
+  deps:controller-gen:
+    desc: Ensure controller-gen is installed
+    internal: true
+    preconditions:
+      - which go
+    cmds:
+      - cmd: go install {{.CONTROLLER_GEN_BIN}}
+    status:
+      - which controller-gen
+
+  deps:bufbuild:
+    desc: Ensure supported bufbuild version is installed
+    internal: true
+    deps:
+      - deps:bin-dir
+    preconditions:
+      - which curl
+    vars:
+      ARCH_TYPE: '{{ if eq ARCH "amd64" }}x86_64{{ else }}{{ARCH}}{{ end }}'
+    cmds:
+      - cmd: echo "Downloading BufBuild v{{.BUFBUILD_VERSION}}..."
+      - cmd: |
+          curl -L "https://github.com/bufbuild/buf/releases/download/v{{.BUFBUILD_VERSION}}/buf-{{OS}}-{{.ARCH_TYPE}}" -o {{.BUFBUILD_BIN}}
+      - cmd: chmod +x {{.BUFBUILD_BIN}}
+    status:
+      - test -x {{.BUFBUILD_BIN}}
 
   deps:golangci-lint:
     desc: Install golangci-lint
