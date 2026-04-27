@@ -3,9 +3,57 @@
 
 version: "3"
 
+env:
+  GOWORK: off
+
+vars:
+  BIN_DIR: "{{ .ROOT_DIR }}/.bin"
+  ROOT_DIR:
+    sh: pwd
+  GO_VERSION: "1.26.2"
+  IMAGE_REPO: '{{ .IMAGE_REPO | default "ghcr.io/agntcy" }}'
+  IMAGE_TAG: '{{ .IMAGE_TAG | default "latest" }}'
+  GO_MODULES:
+    sh: find . -name go.mod -not -path "./tmp*" -exec dirname {} \;
+  GO_MODULES_UNIT_TEST:
+    sh: find . -name go.mod -not -path "./tmp*" -not -path "./tests*" -exec dirname {} \;
+
+  CONTROLLER_GEN_VERSION: "v0.17.3"
+  CONTROLLER_GEN_BIN: "sigs.k8s.io/controller-tools/cmd/controller-gen@{{ .CONTROLLER_GEN_VERSION }}"
+
+  BUFBUILD_VERSION: "1.66.1"
+  BUFBUILD_BIN: "{{ .BIN_DIR }}/bufbuild-{{.BUFBUILD_VERSION}}"
+
+  GOLANGCI_LINT_VERSION: "2.11.3"
+  GOLANGCI_LINT_BIN: "{{ .BIN_DIR }}/golangci-lint-{{.GOLANGCI_LINT_VERSION}}"
+
+  LICENSEI_VERSION: "0.9.0"
+  LICENSEI_BIN: "{{ .BIN_DIR }}/licensei-{{.LICENSEI_VERSION}}"
+
+  MULTIMOD_VERSION: "0.29.0"
+  MULTIMOD_BIN: "{{ .BIN_DIR }}/multimod-{{.MULTIMOD_VERSION}}"
+
+  BAKE_ENV: 'IMAGE_REPO={{ .IMAGE_REPO }} IMAGE_TAG={{ .IMAGE_TAG }}'
+  IMAGE_BAKE_OPTS: "--file=docker-bake.hcl"
+
 tasks:
   default:
     cmd: echo "Run the main Taskfile instead of this one."
+
+
+  ##
+  ## Code generation
+  ##
+
+  api:gen:
+    desc: Generate API stubs from proto files
+    dir: ./proto
+    deps:
+      - task: deps:bufbuild
+    cmds:
+      - "{{.BUFBUILD_BIN}} dep update"
+      - "{{.BUFBUILD_BIN}} generate --template buf.gen.yaml"
+      - task: runtime:gen
 
   runtime:gen:
     desc: Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations
@@ -15,3 +63,275 @@ tasks:
     cmds:
       - go run {{ .CONTROLLER_GEN_BIN }} object paths=./crd/v1/...
       - go run {{ .CONTROLLER_GEN_BIN }} crd:ignoreUnexportedFields=true object:headerFile="./crd/v1/boilerplate.go.txt" paths="./crd/v1/..." output:crd:artifacts:config="../install/chart/templates"
+
+  gen:
+    desc: Generate code for all components
+    cmds:
+      - task: api:gen
+
+  ##
+  ## Build
+  ##
+
+  build:
+    desc: Build images for all components
+    vars:
+      GOARCH: "{{ .GOARCH | default ARCH }}"
+    cmds:
+      - '{{.BAKE_ENV}} docker buildx bake {{.IMAGE_BAKE_OPTS}} --set *.platform=linux/{{.GOARCH}}'
+
+  build:all:
+    desc: Build images for all components for multiple platforms
+    cmds:
+      - '{{.BAKE_ENV}} docker buildx bake {{.IMAGE_BAKE_OPTS}} --set *.platform=linux/amd64,linux/arm64'
+
+  push:
+    desc: Build and push images for all components
+    prompt:
+      - Are you sure you want to push the images to remote registry?
+    cmds:
+      - '{{.BAKE_ENV}} docker buildx bake {{.IMAGE_BAKE_OPTS}} --set=*.output=type=registry'
+
+  ##
+  ## Test
+  ##
+
+  test:unit:
+    desc: Run unit tests on all modules
+    aliases: [test]
+    env:
+      GOWORK: off
+      # TODO: Remove once github.com/agntcy/dir/client stops depending on
+      # github.com/agntcy/dir/runtime/api.
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: warn
+    cmds:
+      - for: { var: GO_MODULES_UNIT_TEST }
+        cmd: |
+          echo "Running tests in {{.ITEM}}"
+          go -C {{.ITEM}} test ./...
+
+  test:unit:coverage:
+    desc: Run unit tests with coverage
+    env:
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: warn
+    cmds:
+      - for: { var: GO_MODULES_UNIT_TEST }
+        cmd: |
+          echo "Running coverage tests in {{.ITEM}}"
+          go -C {{.ITEM}} test -race -coverprofile=coverage.out ./...
+
+  ##
+  ## Linters
+  ##
+
+  lint:go:
+    desc: Run Golang linters
+    vars:
+      GO_MODULES: "{{ .GO_MODULES }}"
+      FIX: '{{ .FIX | default "" }}'
+      REV: '{{ .REV | default "" }}'
+    deps:
+      - task: deps:golangci-lint
+    cmds:
+      - task: lint:go:modules
+        vars:
+          GO_MODULES: "{{ .GO_MODULES }}"
+          FIX: "{{ .FIX }}"
+          REV: "{{ .REV }}"
+
+  lint:go:modules:
+    desc: Run golangci-lint for each module sequentially (single process; global lock)
+    internal: true
+    cmds:
+      - |
+        set -euo pipefail
+        modules="{{ .GO_MODULES }}"
+        [ -z "$modules" ] && exit 0
+        for m in $modules; do
+          echo "Running golangci-lint in $m"
+          (cd "$m" && {{ .GOLANGCI_LINT_BIN }} run --config {{ .ROOT_DIR }}/.golangci.yml{{if eq .FIX "true"}} --fix{{end}} --new-from-rev="{{ .REV }}")
+        done
+
+  lint:buf:
+    desc: Run Buf linters
+    deps:
+      - task: deps:bufbuild
+    dir: ./proto
+    cmds:
+      - "{{.BUFBUILD_BIN}} lint"
+
+  lint:helm:
+    desc: Run Helm linters
+    cmds:
+      - helm dependency update ./install/chart
+      - helm lint ./install/chart --with-subcharts
+
+  lint:
+    desc: Run all linters
+    cmds:
+      - task: lint:go
+      - task: lint:buf
+      - task: lint:helm
+
+  ##
+  ## License
+  ##
+
+  license:
+    desc: Check licenses
+    deps:
+      - task: deps:licensei
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: echo "Running licensei in {{.ITEM}}" && cd {{.ITEM}} && {{ .LICENSEI_BIN }} check --config {{.ROOT_DIR}}/.licensei.toml
+
+  license:cache:
+    desc: Cache license information
+    deps:
+      - task: deps:licensei
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: echo "Running licensei in {{.ITEM}}" && cd {{.ITEM}} && {{ .LICENSEI_BIN }} cache --config {{.ROOT_DIR}}/.licensei.toml
+
+  ##
+  ## Dependency management
+  ##
+
+  deps:tidy:
+    desc: Tidy all Go module dependencies
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: go -C {{.ITEM}} mod tidy -go={{.GO_VERSION}}
+
+  deps:bin-dir:
+    desc: Create bin directory
+    run: once
+    cmd: mkdir -p {{.BIN_DIR}}
+    status:
+      - test -d {{.BIN_DIR}}
+
+  deps:controller-gen:
+    desc: Ensure controller-gen is installed
+    internal: true
+    preconditions:
+      - which go
+    cmds:
+      - cmd: go install {{.CONTROLLER_GEN_BIN}}
+    status:
+      - which controller-gen
+
+  deps:bufbuild:
+    desc: Ensure supported bufbuild version is installed
+    internal: true
+    deps:
+      - deps:bin-dir
+    preconditions:
+      - which curl
+    vars:
+      ARCH_TYPE: '{{ if eq ARCH "amd64" }}x86_64{{ else }}{{ARCH}}{{ end }}'
+    cmds:
+      - cmd: echo "Downloading BufBuild v{{.BUFBUILD_VERSION}}..."
+      - cmd: |
+          curl -L "https://github.com/bufbuild/buf/releases/download/v{{.BUFBUILD_VERSION}}/buf-{{OS}}-{{.ARCH_TYPE}}" -o {{.BUFBUILD_BIN}}
+      - cmd: chmod +x {{.BUFBUILD_BIN}}
+    status:
+      - test -x {{.BUFBUILD_BIN}}
+
+  deps:golangci-lint:
+    desc: Install golangci-lint
+    internal: true
+    deps:
+      - deps:bin-dir
+    cmds:
+      - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b {{.BIN_DIR}} v{{.GOLANGCI_LINT_VERSION}}
+      - mv {{.BIN_DIR}}/golangci-lint {{.GOLANGCI_LINT_BIN}}
+      - chmod +x {{.GOLANGCI_LINT_BIN}}
+    status:
+      - test -x {{.GOLANGCI_LINT_BIN}}
+
+  deps:licensei:
+    desc: Install licensei
+    internal: true
+    deps:
+      - deps:bin-dir
+    cmds:
+      - curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | sh -s -- -b {{.BIN_DIR}} v{{.LICENSEI_VERSION}}
+      - mv {{.BIN_DIR}}/licensei {{.LICENSEI_BIN}}
+      - chmod +x {{.LICENSEI_BIN}}
+    status:
+      - test -x {{.LICENSEI_BIN}}
+
+  deps:multimod-bin:
+    desc: Build the multimod binary
+    internal: true
+    deps:
+      - deps:bin-dir
+    vars:
+      MULTIMOD_REPO_DIR: "{{ .BIN_DIR }}/opentelemetry-go-build-tools"
+    cmds:
+      - git clone https://github.com/open-telemetry/opentelemetry-go-build-tools --branch multimod/v{{.MULTIMOD_VERSION}} {{.MULTIMOD_REPO_DIR}}
+      - go build -C {{.MULTIMOD_REPO_DIR}}/multimod -o {{.MULTIMOD_BIN}} main.go
+      - rm -rf {{.MULTIMOD_REPO_DIR}}
+    status:
+      - test -x {{.MULTIMOD_BIN}}
+
+  ##
+  ## Release
+  ##
+
+  release:create:
+    desc: Prepare release
+    deps:
+      - task: deps:multimod-bin
+    vars:
+      RELEASE_VERSION: "{{ .RELEASE_VERSION }}"
+    cmds:
+      # Switch to new branch
+      - 'if [ "$(git rev-parse --abbrev-ref HEAD)" != "release/{{.RELEASE_VERSION}}" ]; then git checkout -b release/{{.RELEASE_VERSION}}; fi'
+      # Update versions.yaml with the new version
+      - "awk '{gsub(/version: .*/,\"version: {{.RELEASE_VERSION}}\")}1' versions.yaml > versions.yaml.tmp"
+      - "mv versions.yaml.tmp versions.yaml"
+      # Add release changes
+      - |
+        git add .
+        git commit -S --signoff -m "release(dir-runtime): prepare release {{.RELEASE_VERSION}}"
+      # Verify Go release
+      - |
+        {{ .MULTIMOD_BIN }} verify
+        {{ .MULTIMOD_BIN }} prerelease --all-module-sets --skip-go-mod-tidy=true --commit-to-different-branch=false
+      - |
+        git commit --amend -S --signoff -m "release(dir-runtime): prepare release {{.RELEASE_VERSION}}"
+      # Push prepared release
+      - task: release:push
+
+  release:push:
+    internal: true
+    vars:
+      RELEASE_VERSION: "{{ .RELEASE_VERSION }}"
+    prompt:
+      - "Are you sure you want to push the release branch release/{{.RELEASE_VERSION}} to remote repository?"
+    cmds:
+      - |
+        git push --set-upstream origin release/{{.RELEASE_VERSION}} || true
+
+  ##
+  ## Pre-commit hooks
+  ##
+
+  pre-commit:golangci-lint:
+    desc: Run golangci-lint pre-commit hook
+    deps:
+      - task: deps:golangci-lint
+    cmds:
+      - task: lint:go
+        vars:
+          FIX: "true"
+
+  ##
+  ## Cleanup
+  ##
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf {{ .BIN_DIR }}

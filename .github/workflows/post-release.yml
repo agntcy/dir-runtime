@@ -1,0 +1,52 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+name: Post Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: startsWith(github.event.release.tag_name, 'v')
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.modules.outputs.modules }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Get modules
+        id: modules
+        run: |
+          # shellcheck disable=SC2016
+          echo "modules=$(find . -name go.mod -type f -exec awk '/^module / {print $2}' {} \; | jq -c -R '[.,inputs] | map(sub("^github.com\/agntcy\/dir-runtime\/";""))')" >> "$GITHUB_OUTPUT"
+
+  create-module-tags:
+    needs: prepare
+    name: Create module tags
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tags: ${{ fromJson(needs.prepare.outputs.modules) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create tag
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{ matrix.tags }}/${{ github.ref_name }}',
+              sha: context.sha
+            })

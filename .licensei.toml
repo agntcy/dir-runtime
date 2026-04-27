@@ -1,0 +1,33 @@
+approved = [
+  "mit",
+  "mit-0",
+  "apache-2.0",
+  "bsd-3-clause",
+  "bsd-2-clause",
+  "mpl-2.0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "0BSD",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "MIT",
+  "OpenSSL",
+  "CC0-1.0",
+]
+
+ignored = [
+  "buf.build/gen/go/agntcy/oasf/protocolbuffers/go",
+  "buf.build/gen/go/agntcy/oasf-sdk/protocolbuffers/go", # Apache License 2.0 https://github.com/agntcy/oasf-sdk/blob/main/LICENSE.md
+  "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go", # Generated protobuf code, no license file
+  "github.com/agntcy/dir-runtime/api",
+  "github.com/agntcy/dir-runtime/store",
+  "github.com/agntcy/dir-runtime/utils",
+  "github.com/muhlemmer/gu", # Unlicense (public domain) https://github.com/muhlemmer/gu/blob/master/LICENSE - transitive dep of zitadel/oidc
+  "gitlab.com/gitlab-org/api/client-go", # Apache License 2.0 https://gitlab.com/gitlab-org/api/client-go/-/blob/main/LICENSE
+  "google.golang.org/protobuf", # BSD-3-Clause
+  "modernc.org/libc", # BSD-3-Clause https://gitlab.com/cznic/libc/-/blob/master/LICENSE
+  "modernc.org/mathutil", # BSD-3-Clause https://gitlab.com/cznic/mathutil/-/blob/master/LICENSE
+  "modernc.org/memory", # BSD-3-Clause https://gitlab.com/cznic/memory/-/blob/master/LICENSE
+  "modernc.org/sqlite", # BSD-3-Clause https://gitlab.com/cznic/sqlite/-/blob/master/LICENSE
+]
