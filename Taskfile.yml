@@ -315,6 +315,19 @@ tasks:
         git push --set-upstream origin release/{{.RELEASE_VERSION}} || true
 
   ##
+  ## Pre-commit hooks
+  ##
+
+  pre-commit:golangci-lint:
+    desc: Run golangci-lint pre-commit hook
+    deps:
+      - task: deps:golangci-lint
+    cmds:
+      - task: lint:go
+        vars:
+          FIX: "true"
+
+  ##
   ## Cleanup
   ##
 
