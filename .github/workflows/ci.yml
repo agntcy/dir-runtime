@@ -8,10 +8,12 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*.*.*"
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
   pull-requests: write
@@ -186,6 +188,108 @@ jobs:
           codecov_yml_path: codecov.yml
           use_oidc: true
 
+  push:
+    name: Push Images
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: notused
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Docker metadata
+        id: metadata
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: |
+            ghcr.io/agntcy/dir-runtime-discovery
+            ghcr.io/agntcy/dir-runtime-server
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/bake-action@a66e1c87e2eca0503c343edf1d208c716d54b8a8 # v7.1.0
+        with:
+          push: true
+          provenance: false
+          files: |
+            ./docker-bake.hcl
+            cwd://${{ steps.metadata.outputs.bake-file }}
+          set: |
+            *.platform=linux/amd64,linux/arm64
+            *.output=type=registry
+            *.cache-to=type=gha,mode=max
+            *.cache-from=type=gha
+        env:
+          IMAGE_REPO: ghcr.io/agntcy
+          IMAGE_TAG: ${{ github.ref_name }}
+
+  helm:
+    name: Helm Chart
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: notused
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+
+      - name: Helm update dependencies
+        run: helm dependency update install/chart
+
+      - name: Helm lint
+        run: helm lint install/chart --with-subcharts
+
+      - name: Helm package
+        id: build
+        run: |
+          helm package install/chart --dependency-update --version ${{ github.ref_name }}
+          echo "package=dir-runtime-${{ github.ref_name }}.tgz" >> "$GITHUB_OUTPUT"
+
+      - name: Helm push to GHCR OCI registry
+        run: |
+          helm push ${{ steps.build.outputs.package }} oci://ghcr.io/agntcy/dir-runtime/helm-charts
+
+  release:
+    name: GitHub Release
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs:
+      - push
+      - helm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          draft: true
+          generate_release_notes: true
+
   success:
     name: Success
     if: ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'failure') }}
@@ -193,8 +297,11 @@ jobs:
       - lint
       - license
       - verify
-      - test
       - build
+      - test
+      - push
+      - helm
+      - release
     runs-on: ubuntu-latest
     steps:
       - name: Echo Success
