@@ -1,6 +1,7 @@
 # Directory Runtime
 
 ![GitHub Release (latest by date)](https://img.shields.io/github/v/release/agntcy/dir-runtime)
+[![Coverage](https://codecov.io/gh/agntcy/dir-runtime/branch/main/graph/badge.svg)](https://codecov.io/gh/agntcy/dir-runtime)
 [![License](https://img.shields.io/github/license/agntcy/dir-runtime)](./LICENSE.md)
 [![Contributor-Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-fbab2c.svg)](CODE_OF_CONDUCT.md)
 
