@@ -270,7 +270,7 @@ jobs:
         id: build
         run: |
           helm package install/chart --dependency-update --version ${{ github.ref_name }}
-          echo "package=dir-runtime-${{ github.ref_name }}.tgz" >> "$GITHUB_OUTPUT"
+          echo "package=runtime-${{ github.ref_name }}.tgz" >> "$GITHUB_OUTPUT"
 
       - name: Helm push to GHCR OCI registry
         run: |
