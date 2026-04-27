@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v1.0.0] - 2026-04-27
+## [v1.2.1] - 2026-04-27
 
 Initial release of Directory Runtime as a standalone repository, migrated from
-[agntcy/dir](https://github.com/agntcy/dir).
+[agntcy/dir](https://github.com/agntcy/dir). Version starts at v1.2.1 to avoid
+conflicts with existing container images published from the monorepo.
 
 ### Added
 - **Discovery**: Event-based Docker container discovery with real-time monitoring
@@ -28,4 +29,4 @@ Initial release of Directory Runtime as a standalone repository, migrated from
 - **Tooling**: Pre-commit hooks with golangci-lint integration
 - **Tooling**: Code coverage reporting with Codecov
 
-[Full Changelog](https://github.com/agntcy/dir-runtime/releases/tag/v1.0.0)
+[Full Changelog](https://github.com/agntcy/dir-runtime/releases/tag/v1.2.1)
