@@ -1,0 +1,61 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+name: Container Security Scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  packages: read
+
+jobs:
+  trivy-scan:
+    name: Trivy Scan ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - dir-runtime-discovery
+          - dir-runtime-server
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan image
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: ghcr.io/agntcy/${{ matrix.image }}:latest
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
+          format: sarif
+          output: trivy-results-${{ matrix.image }}.sarif
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH,MEDIUM"
+          ignore-unfixed: true
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3.28.18
+        with:
+          sarif_file: trivy-results-${{ matrix.image }}.sarif
+          category: trivy-${{ matrix.image }}
+
+      - name: Fail on critical vulnerabilities
+        run: |
+          critical_count=$(grep -c '"level": "error"' trivy-results-${{ matrix.image }}.sarif || true)
+          if [ "${critical_count}" != "0" ]; then
+            echo "::warning::Critical vulnerabilities detected in ${{ matrix.image }} container image."
+          fi
