@@ -3,7 +3,7 @@
 
 module-sets:
   dir-runtime:
-    version: v1.0.0
+    version: v1.2.1
     modules:
       - github.com/agntcy/dir-runtime/api
       - github.com/agntcy/dir-runtime/discovery
