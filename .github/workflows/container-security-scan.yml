@@ -7,13 +7,13 @@ name: Container Security Scan
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 3 * * *" # Daily at 03:00 UTC
 
 permissions:
   contents: read
-  security-events: write
+  security-events: write # for uploading SARIF
   actions: read
-  packages: read
+  issues: write # create issues for critical CVEs
 
 jobs:
   trivy-scan:
@@ -26,36 +26,72 @@ jobs:
           - dir-runtime-discovery
           - dir-runtime-server
     steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Login to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Scan image
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: ghcr.io/agntcy/${{ matrix.image }}:latest
           github-pat: ${{ secrets.GITHUB_TOKEN }}
           format: sarif
-          output: trivy-results-${{ matrix.image }}.sarif
+          output: trivy-${{ matrix.image }}.sarif
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH,MEDIUM"
           ignore-unfixed: true
 
+      - name: Export image metadata
+        run: echo "ghcr.io/agntcy/${{ matrix.image }}:latest" > trivy-${{ matrix.image }}.meta
+
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3.28.18
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
         with:
-          sarif_file: trivy-results-${{ matrix.image }}.sarif
+          sarif_file: trivy-${{ matrix.image }}.sarif
           category: trivy-${{ matrix.image }}
 
-      - name: Fail on critical vulnerabilities
+      - name: Upload report artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-report-${{ matrix.image }}
+          path: |
+            trivy-${{ matrix.image }}.sarif
+            trivy-${{ matrix.image }}.meta
+          retention-days: 7
+
+  summarize:
+    name: Summarize Results
+    needs: [trivy-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: trivy-report-*
+          path: trivy-artifacts
+
+      - name: Generate summary
         run: |
-          critical_count=$(grep -c '"level": "error"' trivy-results-${{ matrix.image }}.sarif || true)
-          if [ "${critical_count}" != "0" ]; then
-            echo "::warning::Critical vulnerabilities detected in ${{ matrix.image }} container image."
+          chmod +x .github/workflows/scripts/security/generate_trivy_summary.sh
+          .github/workflows/scripts/security/generate_trivy_summary.sh
+
+      - name: Fail if critical vulns found (optional gate)
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          set -e
+          found=$(grep -R "CRITICAL" -c trivy-artifacts || true)
+          if [ "${found}" != "0" ]; then
+            echo "Critical vulnerabilities detected. (Gate currently informational.)" >&2
           fi
+
+      - name: Create GitHub issues for critical CVEs
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Installing dependencies for issue creation script";
+          npm init -y >/dev/null 2>&1 || true
+          npm install @octokit/rest@21 glob >/dev/null 2>&1
+          node .github/workflows/scripts/security/create_critical_cve_issues.js
