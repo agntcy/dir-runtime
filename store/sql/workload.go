@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 

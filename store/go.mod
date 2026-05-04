@@ -4,13 +4,14 @@ go 1.26.2
 
 // Replace local modules
 replace (
-	github.com/agntcy/dir-runtime/api => ../api
 	github.com/agntcy/dir-runtime/utils => ../utils
+	// Point to local dir/api until the new api/runtime types are released
+	github.com/agntcy/dir/api => ../../dir/api
 )
 
 require (
-	github.com/agntcy/dir-runtime/api v1.2.1
 	github.com/agntcy/dir-runtime/utils v1.2.1
+	github.com/agntcy/dir/api v1.2.0
 	github.com/glebarez/sqlite v1.11.0
 	go.etcd.io/etcd/client/v3 v3.6.10
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	"github.com/agntcy/dir-runtime/discovery/config"
 	"github.com/agntcy/dir-runtime/discovery/resolver"
 	"github.com/agntcy/dir-runtime/discovery/runtime"

@@ -10,7 +10,7 @@ import (
 	"slices"
 	"time"
 
-	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	"github.com/agntcy/dir-runtime/store/types"
 	"github.com/agntcy/dir-runtime/utils"
 	"gorm.io/gorm"
