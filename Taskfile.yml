@@ -33,8 +33,6 @@ vars:
   MULTIMOD_VERSION: "0.29.0"
   MULTIMOD_BIN: "{{ .BIN_DIR }}/multimod-{{.MULTIMOD_VERSION}}"
 
-  RENOVATE_VERSION: "43.89.5"
-
   BAKE_ENV: 'IMAGE_REPO={{ .IMAGE_REPO }} IMAGE_TAG={{ .IMAGE_TAG }}'
   IMAGE_BAKE_OPTS: "--file=docker-bake.hcl"
 
@@ -204,34 +202,6 @@ tasks:
     cmds:
       - for: { var: GO_MODULES }
         cmd: go -C {{.ITEM}} mod tidy -go={{.GO_VERSION}}
-
-  deps:renovate:
-    desc: Install Renovate
-    internal: true
-    cmds:
-      - npm install -g renovate@{{.RENOVATE_VERSION}}
-    status:
-      - npm list -g renovate
-
-  deps:renovate:sync:
-    desc: Sync dependencies with Renovate
-    summary: |
-      For extra CLI flags pass RENOVATE_OPTS (e.g. task deps:renovate:sync RENOVATE_OPTS='--dry-run').
-      Default platform is local so local runs do not touch remote project data.
-      GitHub Actions CI sets RENOVATE_PLATFORM to github.
-      This step is only analytical without a GitHub token and will not update PRs or project data.
-    deps:
-      - deps:renovate
-    vars:
-      RENOVATE_OPTS_DEFAULT: >-
-        --persist-repo-data 'true'
-        --allowed-post-upgrade-commands '[".*"]'
-        --post-upgrade-tasks '{"commands": ["task deps:tidy"], "executionMode": "branch"}'
-      RENOVATE_OPTS: "{{ .RENOVATE_OPTS | default .RENOVATE_OPTS_DEFAULT }}"
-      RENOVATE_PLATFORM_EFFECTIVE:
-        sh: printf '%s' "${RENOVATE_PLATFORM:-local}"
-    cmds:
-      - renovate {{.RENOVATE_OPTS}} --platform "{{.RENOVATE_PLATFORM_EFFECTIVE}}"
 
   deps:bin-dir:
     desc: Create bin directory
