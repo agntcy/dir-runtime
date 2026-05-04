@@ -5,7 +5,6 @@ module-sets:
   dir-runtime:
     version: v1.2.1
     modules:
-      - github.com/agntcy/dir-runtime/api
       - github.com/agntcy/dir-runtime/discovery
       - github.com/agntcy/dir-runtime/server
       - github.com/agntcy/dir-runtime/store
