@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"regexp"
 
-	v1 "github.com/agntcy/dir/api/runtime/v1"
 	storetypes "github.com/agntcy/dir-runtime/store/types"
+	v1 "github.com/agntcy/dir/api/runtime/v1"
 )
 
 type Database struct {

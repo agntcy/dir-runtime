@@ -3,9 +3,7 @@ module github.com/agntcy/dir-runtime/store
 go 1.26.2
 
 // Replace local modules
-replace (
-	github.com/agntcy/dir-runtime/utils => ../utils
-)
+replace github.com/agntcy/dir-runtime/utils => ../utils
 
 require (
 	github.com/agntcy/dir-runtime/utils v1.2.1
@@ -44,8 +42,9 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.etcd.io/etcd/api/v3 v3.6.10 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.6.10 // indirect
-	go.opentelemetry.io/otel v1.42.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.42.0 // indirect
+	go.opentelemetry.io/otel/metric v1.42.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.42.0 // indirect
+	go.opentelemetry.io/otel/trace v1.42.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
