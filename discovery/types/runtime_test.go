@@ -6,7 +6,7 @@ package types
 import (
 	"testing"
 
-	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 )
 
 func TestRuntimeEventType_Constants(t *testing.T) {

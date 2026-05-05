@@ -6,10 +6,10 @@ package server
 import (
 	"fmt"
 
-	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
 	"github.com/agntcy/dir-runtime/server/database"
 	grpcserver "github.com/agntcy/dir-runtime/server/grpc"
 	storetypes "github.com/agntcy/dir-runtime/store/types"
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	"google.golang.org/grpc"
 )
 

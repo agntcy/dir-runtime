@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	v1 "github.com/agntcy/dir-runtime/api/runtime/v1"
+	v1 "github.com/agntcy/dir/api/runtime/v1"
 )
 
 // mockStore implements storetypes.StoreReader for testing

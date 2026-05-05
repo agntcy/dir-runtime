@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"strings"
 
-	crdv1 "github.com/agntcy/dir-runtime/api/crd/v1"
-	runtimev1 "github.com/agntcy/dir-runtime/api/runtime/v1"
 	"github.com/agntcy/dir-runtime/store/types"
 	"github.com/agntcy/dir-runtime/utils"
+	crdv1 "github.com/agntcy/dir/api/runtime/crd/v1"
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
