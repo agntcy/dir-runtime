@@ -183,7 +183,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
-          files: ./api/coverage.out,./discovery/coverage.out,./server/coverage.out,./store/coverage.out,./utils/coverage.out
+          files: ./discovery/coverage.out,./server/coverage.out,./store/coverage.out,./utils/coverage.out
           flags: unit
           codecov_yml_path: codecov.yml
           use_oidc: true
