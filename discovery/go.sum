@@ -43,8 +43,8 @@ github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
-github.com/ThalesGroup/crypto11 v1.6.0 h1:Og9EMn44fBS4GNnGnH1aqHnF2wL6F7IU/RhpJajWX/4=
-github.com/ThalesGroup/crypto11 v1.6.0/go.mod h1:H6LRjN5R5SHxTrLqGNteisLDI0/IC6+SGx1pHtbwizE=
+github.com/ThalesGroup/crypto11 v1.6.1 h1:8A8dZPAJPkQnuE55rRkaFWKuLvZ0fklrtJuOd1r92yU=
+github.com/ThalesGroup/crypto11 v1.6.1/go.mod h1:JcRp7axGx5fDqzAcco/jC1BYMHCvd+hKPwpdoaMNHMQ=
 github.com/agntcy/dir/api v1.3.0 h1:Z20GE9+0SjStr4IfKvjnp31gPVFo42ou8Xvmqb06wD4=
 github.com/agntcy/dir/api v1.3.0/go.mod h1:0GcD3/79D3qS6HAvYuujbdJsZcfoHTy/yq+RNtYOp0Q=
 github.com/agntcy/dir/client v1.3.0 h1:gr7KMuUk+5+ZUhUeFMZdKbmJYvg24rb7PaKmLV/vWfo=
