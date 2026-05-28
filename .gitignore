@@ -1,2 +1,7 @@
-.# Builds
+# IDEs
+.vscode/
+.idea/
+.continue/
+
+# Builds
 .bin/
