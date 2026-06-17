@@ -1,6 +1,6 @@
 module github.com/agntcy/dir-runtime/server
 
-go 1.26.3
+go 1.26.4
 
 // Replace local modules
 replace (
@@ -9,9 +9,9 @@ replace (
 )
 
 require (
-	github.com/agntcy/dir-runtime/store v1.3.1
-	github.com/agntcy/dir-runtime/utils v1.3.1
-	github.com/agntcy/dir/api v1.4.0
+	github.com/agntcy/dir-runtime/store v1.3.2
+	github.com/agntcy/dir-runtime/utils v1.3.2
+	github.com/agntcy/dir/api v1.5.0
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
