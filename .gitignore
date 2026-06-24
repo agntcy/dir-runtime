@@ -3,5 +3,8 @@
 .idea/
 .continue/
 
+# macOS
+.DS_Store
+
 # Builds
 .bin/
