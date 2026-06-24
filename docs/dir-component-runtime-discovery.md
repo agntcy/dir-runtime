@@ -9,12 +9,12 @@ The system is split into two independent components:
 
 ```mermaid
 flowchart LR
- subgraph Discovery["Discovery (runtime/discovery)"]
+ subgraph Discovery["Discovery (discovery/)"]
         RA["Runtime Adapters<br>• Docker<br>• Kubernetes"]
         RES["Resolvers<br>• A2A<br>• OASF"]
         SW["Store Writer"]
   end
- subgraph Server["Server (runtime/server)"]
+ subgraph Server["Server (server/)"]
         SPACE[" "]
         API["gRPC API<br>/ListWorkloads"]
   end
@@ -30,7 +30,7 @@ flowchart LR
 
 ## Components
 
-### Discovery (`runtime/discovery/`)
+### Discovery (`discovery/`)
 
 The discovery component is responsible for:
 
@@ -60,7 +60,7 @@ flowchart LR
     n1@{ shape: rect}
 ```
 
-### Server (`runtime/server/`)
+### Server (`server/`)
 
 The server component provides a gRPC API for querying discovered workloads.
 
@@ -76,10 +76,10 @@ IMAGE_TAG=latest task build
 
 ```bash
 # Deploy the stack
-docker compose -f runtime/install/docker/docker-compose.yml up -d
+docker compose -f install/docker/docker-compose.yml up -d
 
 # Deploy example workloads
-docker compose -f runtime/install/examples/docker-compose.yml up -d
+docker compose -f install/examples/docker-compose.yml up -d
 
 # Add discovery to all networks (required for resolvers to work)
 docker network connect examples_team-a runtime-discovery
@@ -90,8 +90,8 @@ docker restart runtime-discovery
 grpcurl -plaintext localhost:8080 agntcy.dir.runtime.v1.DiscoveryService/ListWorkloads
 
 # Cleanup
-docker compose -f runtime/install/docker/docker-compose.yml down
-docker compose -f runtime/install/examples/docker-compose.yml down
+docker compose -f install/docker/docker-compose.yml down
+docker compose -f install/examples/docker-compose.yml down
 ```
 
 ### Kubernetes
@@ -112,14 +112,14 @@ kind load docker-image ghcr.io/agntcy/dir-runtime-server:latest --name runtime
 #### Deploy Example Workloads
 
 ```bash
-kubectl apply -f runtime/install/examples/k8s.workloads.yaml
+kubectl apply -f install/examples/k8s.workloads.yaml
 ```
 
 #### Deploy with CRD Storage
 
 ```bash
 # Install the chart with CRD storage (default)
-helm install runtime runtime/install/chart/
+helm install runtime install/chart/
 
 # Wait for pods
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=discovery --timeout=60s
@@ -137,7 +137,7 @@ kubectl get dw
 
 ```bash
 # Install the chart with etcd storage
-helm install runtime runtime/install/chart/ \
+helm install runtime install/chart/ \
   --set etcd.enabled=true \
   --set discovery.config.store.type=etcd \
   --set server.config.store.type=etcd
@@ -265,7 +265,7 @@ Discovered workloads have a `services` field that holds metadata extracted by re
 
 The OASF resolver requires Directory client configuration via environment variables.
 These are the same as those used by the Directory client library, e.g. `DIRECTORY_CLIENT_SERVER_ADDRESS`.
-Refer to the [Directory Go SDK](./dir-sdk.md#go-sdk) for all available options.
+Refer to the [Directory Client documentation](https://github.com/agntcy/dir/tree/main/client) for all available options.
 
 When a workload has the configured OASF resolver label, the resolver attempts to fetch the corresponding record from Directory and validate its signature before attaching it to the workload.
 
