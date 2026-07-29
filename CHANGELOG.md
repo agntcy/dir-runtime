@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.4] - 2026-07-29
+
+### Changed
+- **Dependencies**: Bumped `github.com/agntcy/dir/api`, `github.com/agntcy/dir/client`, and `github.com/agntcy/dir/utils` to `v1.6.2`
+- **Dependencies** (security): Bumped `github.com/klauspost/compress` to `v1.18.7`
+- **Dependencies** (security): Bumped `google.golang.org/grpc` to `v1.82.1`
+- **Dependencies** (security): Bumped `golang.org/x/net` to `v0.56.0`
+- **Dependencies** (security): Bumped `golang.org/x/text` to `v0.39.0`
+- **CI/CD**: Updated GitHub Actions
+
+[Full Changelog](https://github.com/agntcy/dir-runtime/compare/v1.3.3...v1.3.4)
+
+## [v1.3.3] - 2026-07-14
+
+### Changed
+- **Toolchain**: Updated Go to `v1.26.5`
+- **Dependencies**: Bumped `github.com/moby/moby/client` to `v0.5.0`
+- **CI/CD**: Updated GitHub Actions
+- **Docs**: Simplified README
+
+[Full Changelog](https://github.com/agntcy/dir-runtime/compare/v1.3.2...v1.3.3)
+
+## [v1.3.2] - 2026-06-17
+
+### Fixed
+- **Modules**: Tidied Go module dependencies
+
+### Changed
+- **Toolchain**: Updated Go to `v1.26.4`
+- **CI/CD**: Updated GitHub Actions
+- **Docs**: Moved documentation files and updated filenames and links
+
+[Full Changelog](https://github.com/agntcy/dir-runtime/compare/v1.3.1...v1.3.2)
+
+## [v1.3.1] - 2026-05-28
+
+### Changed
+- **Toolchain**: Updated Go to `v1.26.3`
+- **Dependencies** (security): Bumped `golang.org/x/crypto` to `v0.52.0`
+- **Dependencies** (security): Bumped `golang.org/x/net` to `v0.55.0`
+- **Dependencies** (security): Bumped `github.com/in-toto/in-toto-golang` to `v0.11.0`
+- **Dependencies**: Bumped `google.golang.org/grpc` to `v1.81.1`
+- **Dependencies**: Bumped `go.etcd.io/etcd/client/v3` to `v3.6.11`
+- **Dependencies**: Bumped `github.com/thalesgroup/crypto11` to `v1.6.1`
+- **CI/CD**: Updated GitHub Actions
+- **CI/CD**: Fixed Codecov upload
+
+[Full Changelog](https://github.com/agntcy/dir-runtime/compare/v1.3.0...v1.3.1)
+
 ## [v1.3.0] - 2026-05-05
 
 ### Added
