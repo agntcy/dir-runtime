@@ -11,7 +11,7 @@ require (
 	github.com/glebarez/sqlite v1.11.0
 	go.etcd.io/etcd/client/v3 v3.6.11
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
-	gorm.io/gorm v1.31.1
+	gorm.io/gorm v1.31.2
 	k8s.io/apimachinery v0.36.2
 	k8s.io/client-go v0.36.0
 )
