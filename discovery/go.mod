@@ -12,8 +12,8 @@ replace (
 replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.1
 
 require (
-	github.com/agntcy/dir-runtime/store v1.3.3
-	github.com/agntcy/dir-runtime/utils v1.3.3
+	github.com/agntcy/dir-runtime/store v1.3.4
+	github.com/agntcy/dir-runtime/utils v1.3.4
 	github.com/agntcy/dir/api v1.6.2
 	github.com/agntcy/dir/client v1.6.2
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
