@@ -8,8 +8,8 @@ replace (
 	github.com/agntcy/dir-runtime/utils => ../utils
 )
 
-// Cosign does not updated the crypto11 owner
-replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.5
+// Cosign has not updated the crypto11 module path (ThalesIgnite -> eclipse-keypont).
+replace github.com/ThalesIgnite/crypto11 => github.com/eclipse-keypont/crypto11 v1.6.8
 
 require (
 	github.com/agntcy/dir-runtime/store v1.3.4
@@ -44,7 +44,7 @@ require (
 	github.com/zitadel/logging v0.7.0 // indirect
 	github.com/zitadel/oidc/v3 v3.47.5 // indirect
 	github.com/zitadel/schema v1.3.2 // indirect
-	gorm.io/gorm v1.31.1 // indirect
+	gorm.io/gorm v1.31.2 // indirect
 	modernc.org/libc v1.72.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

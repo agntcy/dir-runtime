@@ -71,7 +71,7 @@ require (
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/gorm v1.31.1 // indirect
+	gorm.io/gorm v1.31.2 // indirect
 	k8s.io/apimachinery v0.36.2 // indirect
 	k8s.io/client-go v0.36.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
