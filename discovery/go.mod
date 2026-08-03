@@ -9,7 +9,7 @@ replace (
 )
 
 // Cosign does not updated the crypto11 owner
-replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.1
+replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.8
 
 require (
 	github.com/agntcy/dir-runtime/store v1.3.4
@@ -18,7 +18,7 @@ require (
 	github.com/agntcy/dir/client v1.6.2
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/moby/moby/api v1.55.0
-	github.com/moby/moby/client v0.5.0
+	github.com/moby/moby/client v0.5.1
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.36.3
