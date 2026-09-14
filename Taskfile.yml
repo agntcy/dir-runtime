@@ -21,7 +21,7 @@ vars:
   CONTROLLER_GEN_VERSION: "v0.17.3"
   CONTROLLER_GEN_BIN: "sigs.k8s.io/controller-tools/cmd/controller-gen@{{ .CONTROLLER_GEN_VERSION }}"
 
-  GOLANGCI_LINT_VERSION: "2.11.3"
+  GOLANGCI_LINT_VERSION: "2.13.2"
   GOLANGCI_LINT_BIN: "{{ .BIN_DIR }}/golangci-lint-{{.GOLANGCI_LINT_VERSION}}"
 
   LICENSEI_VERSION: "0.9.0"
