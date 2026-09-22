@@ -6,7 +6,7 @@ go 1.26.5
 replace github.com/agntcy/dir-runtime/utils => ../utils
 
 require (
-	github.com/agntcy/dir-runtime/utils v1.3.5
+	github.com/agntcy/dir-runtime/utils v1.3.6
 	github.com/agntcy/dir/api v1.7.0
 	github.com/glebarez/sqlite v1.11.0
 	go.etcd.io/etcd/client/v3 v3.6.11
