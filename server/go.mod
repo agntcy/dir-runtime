@@ -9,8 +9,8 @@ replace (
 )
 
 require (
-	github.com/agntcy/dir-runtime/store v1.3.5
-	github.com/agntcy/dir-runtime/utils v1.3.5
+	github.com/agntcy/dir-runtime/store v1.3.6
+	github.com/agntcy/dir-runtime/utils v1.3.6
 	github.com/agntcy/dir/api v1.7.0
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/spf13/viper v1.21.0
