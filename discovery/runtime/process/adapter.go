@@ -54,6 +54,10 @@ type adapter struct {
 
 // NewAdapter creates a new process adapter.
 func NewAdapter(cfg Config) (types.RuntimeAdapter, error) {
+	if !pidCheckSupported {
+		return nil, errors.New("process runtime is only supported on Unix")
+	}
+
 	if cfg.Dir == "" {
 		return nil, errors.New("process runtime dir is required")
 	}
