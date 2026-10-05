@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agntcy/dir-runtime/discovery/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -170,4 +171,204 @@ func TestListWorkloadsDirRemoved(t *testing.T) {
 
 	_, err := a.ListWorkloads(context.Background())
 	require.Error(t, err)
+}
+
+// startProcess starts a long-running process that is killed when the test ends.
+func startProcess(t *testing.T) *exec.Cmd {
+	t.Helper()
+
+	cmd := exec.CommandContext(t.Context(), "sleep", "60")
+	require.NoError(t, cmd.Start())
+
+	t.Cleanup(func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	})
+
+	return cmd
+}
+
+const (
+	eventTimeout   = 2 * time.Second
+	noEventTimeout = 100 * time.Millisecond
+)
+
+// watch starts WatchEvents in the background and returns its event channel.
+func watch(t *testing.T, a *adapter) <-chan *types.RuntimeEvent {
+	t.Helper()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	events := make(chan *types.RuntimeEvent, 16)
+	done := make(chan error, 1)
+
+	go func() { done <- a.WatchEvents(ctx, events) }()
+
+	t.Cleanup(func() {
+		cancel()
+		require.ErrorIs(t, <-done, context.Canceled)
+	})
+
+	return events
+}
+
+func nextEvent(t *testing.T, events <-chan *types.RuntimeEvent) *types.RuntimeEvent {
+	t.Helper()
+
+	select {
+	case event := <-events:
+		return event
+	case <-time.After(eventTimeout):
+		t.Fatal("timed out waiting for event")
+
+		return nil
+	}
+}
+
+func assertNoEvent(t *testing.T, events <-chan *types.RuntimeEvent) {
+	t.Helper()
+
+	select {
+	case event := <-events:
+		t.Fatalf("unexpected %s event for %s", event.Type, event.Workload.GetId())
+	case <-time.After(noEventTimeout):
+	}
+}
+
+func TestWatchEventsLifecycle(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	require.Empty(t, listIDs(t, a))
+
+	events := watch(t, a)
+
+	writeDescriptor(t, dir, "agent", os.Getpid(), discoverable())
+
+	event := nextEvent(t, events)
+	assert.Equal(t, types.RuntimeEventTypeAdded, event.Type)
+	assert.Equal(t, "agent", event.Workload.GetId())
+	assert.Equal(t, "process", event.Workload.GetType())
+
+	assertNoEvent(t, events)
+
+	labels := discoverable()
+	labels["org.agntcy/agent-type"] = "a2a"
+	writeDescriptor(t, dir, "agent", os.Getpid(), labels)
+
+	event = nextEvent(t, events)
+	assert.Equal(t, types.RuntimeEventTypeModified, event.Type)
+	assert.Equal(t, "a2a", event.Workload.GetLabels()["org.agntcy/agent-type"])
+
+	require.NoError(t, os.Remove(filepath.Join(dir, "agent.json")))
+
+	event = nextEvent(t, events)
+	assert.Equal(t, types.RuntimeEventTypeDeleted, event.Type)
+	assert.Equal(t, "agent", event.Workload.GetId())
+}
+
+func TestWatchEventsBaselineNotReemitted(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	writeDescriptor(t, dir, "agent", os.Getpid(), discoverable())
+	require.Equal(t, []string{"agent"}, listIDs(t, a))
+
+	events := watch(t, a)
+
+	assertNoEvent(t, events)
+}
+
+func TestWatchEventsProcessExit(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	cmd := startProcess(t)
+	writeDescriptor(t, dir, "agent", cmd.Process.Pid, discoverable())
+	require.Equal(t, []string{"agent"}, listIDs(t, a))
+
+	events := watch(t, a)
+
+	require.NoError(t, cmd.Process.Kill())
+	_ = cmd.Wait()
+
+	event := nextEvent(t, events)
+	assert.Equal(t, types.RuntimeEventTypeDeleted, event.Type)
+	assert.Equal(t, "agent", event.Workload.GetId())
+	assert.FileExists(t, filepath.Join(dir, "agent.json"), "adapter must not delete descriptors")
+}
+
+func TestWatchEventsLabelRemoved(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	writeDescriptor(t, dir, "agent", os.Getpid(), discoverable())
+	require.Equal(t, []string{"agent"}, listIDs(t, a))
+
+	events := watch(t, a)
+
+	writeDescriptor(t, dir, "agent", os.Getpid(), map[string]string{"app": "x"})
+
+	event := nextEvent(t, events)
+	assert.Equal(t, types.RuntimeEventTypeDeleted, event.Type)
+}
+
+func TestWatchEventsPIDChangeIsModified(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	first := startProcess(t)
+	writeDescriptor(t, dir, "agent", first.Process.Pid, discoverable())
+	require.Equal(t, []string{"agent"}, listIDs(t, a))
+
+	events := watch(t, a)
+
+	second := startProcess(t)
+	writeDescriptor(t, dir, "agent", second.Process.Pid, discoverable())
+
+	event := nextEvent(t, events)
+	assert.Equal(t, types.RuntimeEventTypeModified, event.Type)
+}
+
+func TestWatchEventsKeepsStateOnTransientParseError(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	writeDescriptor(t, dir, "agent", os.Getpid(), discoverable())
+	require.Equal(t, []string{"agent"}, listIDs(t, a))
+
+	events := watch(t, a)
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "agent.json"), []byte(`{"name":`), 0o600))
+	assertNoEvent(t, events)
+
+	writeDescriptor(t, dir, "agent", os.Getpid(), discoverable())
+	assertNoEvent(t, events)
+}
+
+func TestWatchEventsKeepsStateOnScanError(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	writeDescriptor(t, dir, "agent", os.Getpid(), discoverable())
+	require.Equal(t, []string{"agent"}, listIDs(t, a))
+
+	events := watch(t, a)
+
+	require.NoError(t, os.RemoveAll(dir))
+	assertNoEvent(t, events)
+}
+
+func TestDiff(t *testing.T) {
+	a, _ := newTestAdapter(t)
+	desc, err := parseDescriptor([]byte(`{"name":"agent","pid":1,"ports":[9999]}`))
+	require.NoError(t, err)
+
+	base := entry{workload: desc.toWorkload("same", a.hostname), pid: 1}
+	changed := entry{workload: desc.toWorkload("changed", a.hostname), pid: 1}
+	changedNew := entry{workload: desc.toWorkload("changed", a.hostname), pid: 1}
+	changedNew.workload.Name = "renamed"
+	gone := entry{workload: desc.toWorkload("gone", a.hostname), pid: 1}
+	added := entry{workload: desc.toWorkload("added", a.hostname), pid: 1}
+
+	events := diff(
+		map[string]entry{"same": base, "changed": changed, "gone": gone},
+		map[string]entry{"same": base, "changed": changedNew, "added": added},
+	)
+
+	got := make(map[string]types.RuntimeEventType, len(events))
+	for _, event := range events {
+		got[event.Workload.GetId()] = event.Type
+	}
+
+	assert.Equal(t, map[string]types.RuntimeEventType{
+		"changed": types.RuntimeEventTypeModified,
+		"gone":    types.RuntimeEventTypeDeleted,
+		"added":   types.RuntimeEventTypeAdded,
+	}, got)
 }

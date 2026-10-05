@@ -16,6 +16,7 @@ import (
 	"github.com/agntcy/dir-runtime/discovery/types"
 	"github.com/agntcy/dir-runtime/utils"
 	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -202,9 +203,70 @@ func (a *adapter) logInvalid(path string, err error) {
 	logger.Warn("skipping invalid workload descriptor", "file", path, "error", err)
 }
 
-// WatchEvents is implemented in the next change.
-func (a *adapter) WatchEvents(ctx context.Context, _ chan<- *types.RuntimeEvent) error {
-	<-ctx.Done()
+// WatchEvents polls the descriptor directory and sends workload events to the channel.
+// It diffs each scan against the previous one, starting from the last ListWorkloads result.
+//
+//nolint:wrapcheck
+func (a *adapter) WatchEvents(ctx context.Context, eventChan chan<- *types.RuntimeEvent) error {
+	ticker := time.NewTicker(a.pollInterval)
+	defer ticker.Stop()
 
-	return ctx.Err() //nolint:wrapcheck
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			for _, event := range a.poll() {
+				select {
+				case eventChan <- event:
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+		}
+	}
+}
+
+// poll scans the directory once and returns the events since the previous scan.
+// On a scan error the previous state is kept, so a transient error does not delete every workload.
+func (a *adapter) poll() []*types.RuntimeEvent {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	current, err := a.scan(a.known)
+	if err != nil {
+		logger.Error("failed to scan descriptor directory", "error", err)
+
+		return nil
+	}
+
+	events := diff(a.known, current)
+	a.known = current
+
+	return events
+}
+
+// diff returns the events that turn prev into current.
+// A workload counts as modified when its content or its PID changed, so a restarted process is re-resolved.
+func diff(prev, current map[string]entry) []*types.RuntimeEvent {
+	var events []*types.RuntimeEvent
+
+	for id, cur := range current {
+		old, existed := prev[id]
+
+		switch {
+		case !existed:
+			events = append(events, &types.RuntimeEvent{Type: types.RuntimeEventTypeAdded, Workload: cur.workload.DeepCopy()})
+		case old.pid != cur.pid || !proto.Equal(old.workload, cur.workload):
+			events = append(events, &types.RuntimeEvent{Type: types.RuntimeEventTypeModified, Workload: cur.workload.DeepCopy()})
+		}
+	}
+
+	for id, old := range prev {
+		if _, exists := current[id]; !exists {
+			events = append(events, &types.RuntimeEvent{Type: types.RuntimeEventTypeDeleted, Workload: old.workload.DeepCopy()})
+		}
+	}
+
+	return events
 }
