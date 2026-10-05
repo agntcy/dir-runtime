@@ -192,8 +192,8 @@ echo '{"name": "Hello Agent", "description": "Example agent"}' > /tmp/hello-agen
 python3 -m http.server 9999 --directory /tmp/hello-agent &
 AGENT_PID=$!
 
-# Create the descriptor directory (discovery also creates it on start)
-mkdir -p ~/.agntcy/dir-runtime/workloads.d
+# Create the descriptor directory, private to the user (discovery also creates it on start)
+mkdir -p -m 700 ~/.agntcy/dir-runtime/workloads.d
 
 # Start discovery and server, sharing a SQLite store
 DISCOVERY_RUNTIME_TYPE=process DISCOVERY_STORE_TYPE=sqlite DISCOVERY_RESOLVER_OASF_ENABLED=false \
@@ -220,6 +220,8 @@ kill $AGENT_PID
 To resolve OASF records from a local Directory (`dirctl daemon start`), drop `DISCOVERY_RESOLVER_OASF_ENABLED=false`, set `DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888` and `DIRECTORY_CLIENT_AUTH_MODE=insecure`, and add `"org.agntcy/agent-record": "<cid or name:version>"` to the descriptor's labels or annotations.
 
 The walkthrough uses SQLite so no extra service is needed; etcd works the same way by running etcd and setting `DISCOVERY_STORE_TYPE=etcd` and `SERVER_STORE_TYPE=etcd`.
+
+> **Note:** Each discovery instance must use its own store (or SQLite path), with its own server reading it. On startup, discovery removes every stored workload its runtime does not currently report, so running e.g. Docker and process discovery against the same store makes them delete each other's workloads.
 
 ## Workload Labels
 
