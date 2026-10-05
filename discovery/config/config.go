@@ -15,6 +15,7 @@ import (
 	runtime "github.com/agntcy/dir-runtime/discovery/runtime/config"
 	docker "github.com/agntcy/dir-runtime/discovery/runtime/docker"
 	k8s "github.com/agntcy/dir-runtime/discovery/runtime/k8s"
+	process "github.com/agntcy/dir-runtime/discovery/runtime/process"
 	store "github.com/agntcy/dir-runtime/store/config"
 	"github.com/agntcy/dir-runtime/store/crd"
 	"github.com/agntcy/dir-runtime/store/etcd"
@@ -135,6 +136,14 @@ func LoadConfig() (*Config, error) {
 	v.SetDefault("runtime.kubernetes.namespace", k8s.DefaultNamespace)
 	v.SetDefault("runtime.kubernetes.label_key", k8s.DefaultLabelKey)
 	v.SetDefault("runtime.kubernetes.label_value", k8s.DefaultLabelValue)
+
+	//
+	// Process configuration
+	//
+	v.SetDefault("runtime.process.dir", process.DefaultDir)
+	v.SetDefault("runtime.process.poll_interval", process.DefaultPollInterval)
+	v.SetDefault("runtime.process.label_key", process.DefaultLabelKey)
+	v.SetDefault("runtime.process.label_value", process.DefaultLabelValue)
 
 	//
 	// Resolver configuration

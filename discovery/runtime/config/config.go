@@ -6,6 +6,7 @@ package config
 import (
 	"github.com/agntcy/dir-runtime/discovery/runtime/docker"
 	"github.com/agntcy/dir-runtime/discovery/runtime/k8s"
+	"github.com/agntcy/dir-runtime/discovery/runtime/process"
 	"github.com/agntcy/dir-runtime/discovery/types"
 )
 
@@ -19,4 +20,7 @@ type Config struct {
 
 	// Kubernetes runtime configuration.
 	Kubernetes k8s.Config `json:"kubernetes" mapstructure:"kubernetes"`
+
+	// Process runtime configuration.
+	Process process.Config `json:"process" mapstructure:"process"`
 }

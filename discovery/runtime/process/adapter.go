@@ -80,7 +80,7 @@ func NewAdapter(cfg Config) (types.RuntimeAdapter, error) {
 		hostname = fallbackHost
 	}
 
-	logger.Info("watching descriptor directory", "dir", dir, "poll_interval", cfg.PollInterval)
+	logger.Info("watching descriptor directory", "dir", dir, "poll_interval", cfg.PollInterval.String())
 
 	return &adapter{
 		dir:          dir,

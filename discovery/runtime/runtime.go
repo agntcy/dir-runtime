@@ -9,6 +9,7 @@ import (
 	"github.com/agntcy/dir-runtime/discovery/runtime/config"
 	"github.com/agntcy/dir-runtime/discovery/runtime/docker"
 	"github.com/agntcy/dir-runtime/discovery/runtime/k8s"
+	"github.com/agntcy/dir-runtime/discovery/runtime/process"
 	"github.com/agntcy/dir-runtime/discovery/types"
 )
 
@@ -19,6 +20,8 @@ func NewAdapter(cfg config.Config) (types.RuntimeAdapter, error) {
 		return docker.NewAdapter(cfg.Docker)
 	case k8s.RuntimeType:
 		return k8s.NewAdapter(cfg.Kubernetes)
+	case process.RuntimeType:
+		return process.NewAdapter(cfg.Process)
 	default:
 		return nil, fmt.Errorf("unsupported runtime: %s", cfg.Type)
 	}
