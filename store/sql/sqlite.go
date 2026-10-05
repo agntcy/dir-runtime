@@ -4,11 +4,14 @@
 package sql
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/agntcy/dir-runtime/utils"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -17,23 +20,37 @@ import (
 // StoreType is the identifier for the SQLite store type.
 const StoreTypeSqlite = "sqlite"
 
-// newSQLite creates a new database connection using the pure-Go SQLite driver.
-func NewSqlite() (*gorm.DB, error) {
-	// In case of SQLite, we always use a temporary file for the database
-	// since the state will be managed by the runtime server and wont persist across sessions.
-	// The runtime rebuilds the database on startup.
-	tmpFile, err := os.CreateTemp("", "dir-runtime-*.db")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temporary file for SQLite database: %w", err)
+const (
+	// dirPerm is the permission used when creating the database parent directory.
+	dirPerm = 0o700
+
+	// busyTimeoutMs is how long a connection waits for a lock held by another process.
+	busyTimeoutMs = 5000
+)
+
+// NewSqlite creates a new database connection using the pure-Go SQLite driver.
+// The database file is shared by every component configured with the same path,
+// e.g. discovery writing and server reading. WAL mode and a busy timeout let one
+// writer and concurrent readers use the file from separate processes.
+func NewSqlite(cfg Config) (*gorm.DB, error) {
+	if cfg.Path == "" {
+		return nil, errors.New("sqlite path is required")
 	}
 
-	// Close the file immediately since gorm will manage the connection to it. We just need the path.
-	if err := tmpFile.Close(); err != nil {
-		return nil, fmt.Errorf("failed to close temporary file for SQLite database: %w", err)
+	path, err := utils.ExpandHome(cfg.Path)
+	if err != nil {
+		return nil, fmt.Errorf("invalid sqlite path: %w", err)
 	}
+
+	if err := os.MkdirAll(filepath.Dir(path), dirPerm); err != nil {
+		return nil, fmt.Errorf("failed to create directory for SQLite database: %w", err)
+	}
+
+	// Pragmas are applied to every pooled connection by the driver.
+	dsn := fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(%d)&_pragma=foreign_keys(1)", path, busyTimeoutMs)
 
 	// Create database
-	db, err := gorm.Open(sqlite.Open(tmpFile.Name()), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: gormlogger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
 			gormlogger.Config{
@@ -46,11 +63,6 @@ func NewSqlite() (*gorm.DB, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to SQLite database: %w", err)
-	}
-
-	// SQLite does not enforce foreign keys by default; enable for CASCADE support.
-	if err := db.Exec("PRAGMA foreign_keys = ON").Error; err != nil {
-		return nil, fmt.Errorf("failed to enable SQLite foreign keys: %w", err)
 	}
 
 	return db, nil

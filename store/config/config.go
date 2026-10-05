@@ -6,6 +6,7 @@ package config
 import (
 	"github.com/agntcy/dir-runtime/store/crd"
 	"github.com/agntcy/dir-runtime/store/etcd"
+	"github.com/agntcy/dir-runtime/store/sql"
 	"github.com/agntcy/dir-runtime/store/types"
 )
 
@@ -19,4 +20,7 @@ type Config struct {
 
 	// CRD configuration.
 	CRD crd.Config `json:"crd" mapstructure:"crd"`
+
+	// SQLite configuration.
+	SQLite sql.Config `json:"sqlite" mapstructure:"sqlite"`
 }

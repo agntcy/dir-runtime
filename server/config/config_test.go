@@ -10,6 +10,7 @@ import (
 	store "github.com/agntcy/dir-runtime/store/config"
 	"github.com/agntcy/dir-runtime/store/crd"
 	"github.com/agntcy/dir-runtime/store/etcd"
+	"github.com/agntcy/dir-runtime/store/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,6 +36,7 @@ func TestConfig(t *testing.T) {
 				"SERVER_STORE_CRD_NAMESPACE":         "crd-namespace",
 				"SERVER_STORE_CRD_KUBECONFIG":        "crd-kubeconfig",
 				"SERVER_STORE_CRD_RESYNC_PERIOD":     "15s",
+				"SERVER_STORE_SQLITE_PATH":           "/custom/workloads.db",
 			},
 			ExpectedConfig: &Config{
 				Host: "192.168.1.100",
@@ -53,6 +55,9 @@ func TestConfig(t *testing.T) {
 						Namespace:    "crd-namespace",
 						Kubeconfig:   "crd-kubeconfig",
 						ResyncPeriod: 15 * time.Second,
+					},
+					SQLite: sql.Config{
+						Path: "/custom/workloads.db",
 					},
 				},
 			},
@@ -77,6 +82,9 @@ func TestConfig(t *testing.T) {
 						Namespace:    crd.DefaultNamespace,
 						Kubeconfig:   "",
 						ResyncPeriod: crd.DefaultResyncPeriod,
+					},
+					SQLite: sql.Config{
+						Path: sql.DefaultPath,
 					},
 				},
 			},
