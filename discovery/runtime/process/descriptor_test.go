@@ -24,7 +24,8 @@ func TestParseDescriptor(t *testing.T) {
 		{name: "missing name", data: `{"pid":1,"ports":["9999"]}`, wantErr: "name is required"},
 		{name: "zero pid", data: `{"name":"agent","pid":0,"ports":["9999"]}`, wantErr: "pid must be positive"},
 		{name: "negative pid", data: `{"name":"agent","pid":-5,"ports":["9999"]}`, wantErr: "pid must be positive"},
-		{name: "no ports", data: `{"name":"agent","pid":1}`, wantErr: "at least one port is required"},
+		{name: "no ports", data: `{"name":"agent","pid":1}`},
+		{name: "empty ports", data: `{"name":"agent","pid":1,"ports":[]}`},
 		{name: "port zero", data: `{"name":"agent","pid":1,"ports":["0"]}`, wantErr: "invalid port"},
 		{name: "port too large", data: `{"name":"agent","pid":1,"ports":[70000]}`, wantErr: "invalid port"},
 		{name: "fractional port", data: `{"name":"agent","pid":1,"ports":[99.5]}`, wantErr: "invalid port"},
@@ -63,6 +64,20 @@ func TestDescriptorToWorkload(t *testing.T) {
 		assert.Equal(t, []string{"host"}, workload.GetIsolationGroups())
 		assert.NotNil(t, workload.GetLabels())
 		assert.NotNil(t, workload.GetAnnotations())
+	})
+
+	t.Run("locator-only workload has no ports", func(t *testing.T) {
+		desc, err := parseDescriptor([]byte(`{
+			"name": "agent",
+			"pid": 42,
+			"annotations": {"org.agntcy/locator": "slim://org/ns/agent"}
+		}`))
+		require.NoError(t, err)
+
+		workload := desc.toWorkload("agent-1", "my-host")
+
+		assert.Empty(t, workload.GetPorts())
+		assert.Equal(t, "slim://org/ns/agent", workload.GetAnnotations()["org.agntcy/locator"])
 	})
 
 	t.Run("keeps descriptor values", func(t *testing.T) {

@@ -37,7 +37,8 @@ type descriptor struct {
 }
 
 // parseDescriptor decodes and validates a workload descriptor.
-// Ports may be given as JSON strings or numbers.
+// Ports are optional (an agent may only be reachable through a locator annotation)
+// and may be given as JSON strings or numbers.
 func parseDescriptor(data []byte) (*descriptor, error) {
 	var desc descriptor
 	if err := json.Unmarshal(data, &desc); err != nil {
@@ -50,10 +51,6 @@ func parseDescriptor(data []byte) (*descriptor, error) {
 
 	if desc.PID <= 0 {
 		return nil, fmt.Errorf("pid must be positive, got %d", desc.PID)
-	}
-
-	if len(desc.Ports) == 0 {
-		return nil, errors.New("at least one port is required")
 	}
 
 	for _, port := range desc.Ports {
