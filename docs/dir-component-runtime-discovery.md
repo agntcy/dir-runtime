@@ -168,7 +168,7 @@ The process runtime discovers agents running directly on a host. Each process an
 
 #### Descriptor Format
 
-One file per process at `<dir>/<id>.json`; the file name without `.json` is the workload ID. See [`install/examples/process/hello-agent.json`](../install/examples/process/hello-agent.json).
+One file per process at `<dir>/<id>.json`; the file name without `.json` is the workload ID. Descriptors must be regular files of at most 64 KiB; symlinks and other file types are ignored. See [`install/examples/process/hello-agent.json`](../install/examples/process/hello-agent.json).
 
 | Field | Required | Description |
 |-------|----------|-------------|

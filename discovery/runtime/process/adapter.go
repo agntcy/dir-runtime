@@ -7,10 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/agntcy/dir-runtime/discovery/types"
@@ -20,9 +23,10 @@ import (
 )
 
 const (
-	descriptorExt = ".json"
-	dirPerm       = 0o700
-	fallbackHost  = "localhost"
+	descriptorExt     = ".json"
+	maxDescriptorSize = 64 << 10
+	dirPerm           = 0o700
+	fallbackHost      = "localhost"
 )
 
 var logger = utils.NewLogger("runtime", "process")
@@ -150,7 +154,7 @@ func (a *adapter) scan(prev map[string]entry) (map[string]entry, error) {
 		path := filepath.Join(a.dir, name)
 		seen[path] = struct{}{}
 
-		desc, err := readDescriptor(path)
+		desc, err := readDescriptor(file, path)
 		if err != nil {
 			a.logInvalid(path, err)
 
@@ -180,11 +184,43 @@ func (a *adapter) scan(prev map[string]entry) (map[string]entry, error) {
 	return current, nil
 }
 
-// readDescriptor reads and parses a descriptor file.
-func readDescriptor(path string) (*descriptor, error) {
-	data, err := os.ReadFile(path)
+// readDescriptor reads and parses a descriptor directory entry.
+// Only regular files are accepted; symlinks, FIFOs, sockets and devices are rejected
+// so they cannot block the scan or point it at arbitrary files.
+func readDescriptor(file fs.DirEntry, path string) (*descriptor, error) {
+	if !file.Type().IsRegular() {
+		return nil, errors.New("not a regular file")
+	}
+
+	return readDescriptorFile(path)
+}
+
+// readDescriptorFile reads and parses a descriptor file of at most maxDescriptorSize bytes.
+// The file is opened non-blocking and re-checked on the open handle, so an entry replaced
+// by a FIFO or device after the directory listing is rejected instead of blocking the scan.
+func readDescriptorFile(path string) (*descriptor, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat file: %w", err)
+	}
+
+	if !info.Mode().IsRegular() {
+		return nil, errors.New("not a regular file")
+	}
+
+	data, err := io.ReadAll(io.LimitReader(f, maxDescriptorSize+1))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	if len(data) > maxDescriptorSize {
+		return nil, fmt.Errorf("file exceeds %d bytes", maxDescriptorSize)
 	}
 
 	return parseDescriptor(data)
