@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -42,12 +43,23 @@ func NewSqlite(cfg Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("invalid sqlite path: %w", err)
 	}
 
+	path, err = filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("invalid sqlite path: %w", err)
+	}
+
 	if err := os.MkdirAll(filepath.Dir(path), dirPerm); err != nil {
 		return nil, fmt.Errorf("failed to create directory for SQLite database: %w", err)
 	}
 
-	// Pragmas are applied to every pooled connection by the driver.
-	dsn := fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(%d)&_pragma=foreign_keys(1)", path, busyTimeoutMs)
+	// Use a file: URI so characters such as "?" and "#" in the path are escaped
+	// instead of being parsed as the query. Pragmas are applied to every pooled
+	// connection by the driver.
+	dsn := (&url.URL{
+		Scheme:   "file",
+		Path:     path,
+		RawQuery: fmt.Sprintf("_pragma=journal_mode(WAL)&_pragma=busy_timeout(%d)&_pragma=foreign_keys(1)", busyTimeoutMs),
+	}).String()
 
 	// Create database
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{

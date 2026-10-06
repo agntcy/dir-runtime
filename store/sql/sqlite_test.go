@@ -245,3 +245,39 @@ func TestSqliteConcurrentWriterAndReader(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestNewSqliteSpecialCharactersInPath(t *testing.T) {
+	for _, name := range []string{"work?loads.db", "work loads.db", "work#loads.db", "work%3Floads.db"} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, name)
+
+			newTestStore(t, path)
+
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatalf("ReadDir() error = %v", err)
+			}
+
+			if _, err := os.Stat(path); err != nil {
+				names := make([]string, 0, len(entries))
+				for _, e := range entries {
+					names = append(names, e.Name())
+				}
+
+				t.Errorf("database not created at %q, directory has %v", path, names)
+			}
+		})
+	}
+}
+
+func TestNewSqliteRelativePath(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	newTestStore(t, filepath.Join("data", "workloads.db"))
+
+	if _, err := os.Stat(filepath.Join(dir, "data", "workloads.db")); err != nil {
+		t.Errorf("database not created relative to working directory: %v", err)
+	}
+}
