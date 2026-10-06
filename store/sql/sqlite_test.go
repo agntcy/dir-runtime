@@ -202,21 +202,30 @@ func TestSqliteConcurrentWriterAndReader(t *testing.T) {
 
 	const iterations = 200
 
-	errs := make(chan error, 2*iterations)
+	var (
+		mu   sync.Mutex
+		errs []error
+		wg   sync.WaitGroup
+	)
 
-	var wg sync.WaitGroup
+	record := func(err error) {
+		mu.Lock()
+		defer mu.Unlock()
+
+		errs = append(errs, err)
+	}
 
 	wg.Go(func() {
 		for i := range iterations {
 			id := fmt.Sprintf("w%d", i%10)
 
 			if err := writer.RegisterWorkload(ctx, &runtimev1.Workload{Id: id, Name: fmt.Sprint(i)}); err != nil {
-				errs <- fmt.Errorf("register %s: %w", id, err)
+				record(fmt.Errorf("register %s: %w", id, err))
 			}
 
 			if i%3 == 0 {
 				if err := writer.DeregisterWorkload(ctx, id); err != nil {
-					errs <- fmt.Errorf("deregister %s: %w", id, err)
+					record(fmt.Errorf("deregister %s: %w", id, err))
 				}
 			}
 		}
@@ -225,15 +234,14 @@ func TestSqliteConcurrentWriterAndReader(t *testing.T) {
 	wg.Go(func() {
 		for range iterations {
 			if _, err := reader.ListWorkloads(ctx); err != nil {
-				errs <- fmt.Errorf("list: %w", err)
+				record(fmt.Errorf("list: %w", err))
 			}
 		}
 	})
 
 	wg.Wait()
-	close(errs)
 
-	for err := range errs {
+	for _, err := range errs {
 		t.Error(err)
 	}
 }
