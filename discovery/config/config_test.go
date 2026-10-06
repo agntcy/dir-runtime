@@ -32,6 +32,7 @@ func TestConfig(t *testing.T) {
 			Name: "Custom config with Docker runtime and etcd store",
 			EnvVars: map[string]string{
 				"DISCOVERY_WORKERS":                        "8",
+				"DISCOVERY_INSTANCE_ID":                    "custom-instance",
 				"DISCOVERY_RUNTIME_TYPE":                   "docker",
 				"DISCOVERY_RUNTIME_DOCKER_HOST":            "unix:///custom/docker.sock",
 				"DISCOVERY_RUNTIME_DOCKER_LABEL_KEY":       "custom.label/discover",
@@ -65,7 +66,8 @@ func TestConfig(t *testing.T) {
 				"DISCOVERY_RESOLVER_OASF_LABEL_KEY":        "custom.oasf/record",
 			},
 			ExpectedConfig: &Config{
-				Workers: 8,
+				Workers:    8,
+				InstanceID: "custom-instance",
 				Runtime: runtime.Config{
 					Type: docker.RuntimeType,
 					Docker: docker.Config{

@@ -47,6 +47,11 @@ type Config struct {
 	// Worker count for processing tasks.
 	Workers int `json:"workers" mapstructure:"workers"`
 
+	// InstanceID identifies this discovery instance. Together with the runtime type it scopes
+	// which stored workloads the instance owns. It is only needed when several instances of the
+	// same runtime share one store, and must then be unique and stable per instance.
+	InstanceID string `json:"instance_id" mapstructure:"instance_id"`
+
 	// Store config for writing discovered workloads.
 	Store store.Config `json:"store" mapstructure:"store"`
 
@@ -88,6 +93,7 @@ func LoadConfig() (*Config, error) {
 	// General configuration
 	//
 	v.SetDefault("workers", DefaultWorkers)
+	v.SetDefault("instance_id", "")
 
 	//
 	// Store configuration

@@ -26,6 +26,11 @@ const (
 	defaultWorkerShutdownTimeout = 10 * time.Second
 )
 
+// InstanceAnnotation is the workload annotation that records which discovery instance wrote it.
+// Together with the workload runtime it scopes reconciliation, so several discovery instances
+// can share one store without removing each other's workloads.
+const InstanceAnnotation = "org.agntcy/discovery-instance"
+
 // Option configures discovery service behavior.
 type Option func(*options) error
 
@@ -96,6 +101,7 @@ type runner struct {
 	adapter    types.RuntimeAdapter
 	store      storetypes.Store
 	closeStore bool
+	instanceID string
 	resolvers  []types.WorkloadResolver
 	logger     *utils.Logger
 }
@@ -158,6 +164,7 @@ func newRunner(ctx context.Context, opts ...Option) (*runner, error) {
 		adapter:    adapter,
 		store:      o.store,
 		closeStore: closeStore,
+		instanceID: o.cfg.InstanceID,
 		resolvers:  resolvers,
 		logger:     o.logger,
 	}, nil
@@ -265,15 +272,17 @@ func (r *runner) reconcile(ctx context.Context, workQueue chan<- *runtimev1.Work
 		return fmt.Errorf("failed to list workloads from runtime: %w", err)
 	}
 
-	storedIDs, err := r.store.ListWorkloadIDs(ctx)
+	stored, err := r.store.ListWorkloads(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to list stored workload IDs: %w", err)
+		return fmt.Errorf("failed to list stored workloads: %w", err)
 	}
 
 	seenIDs := make(map[string]struct{})
 
 	for _, w := range workloads {
 		seenIDs[w.GetId()] = struct{}{}
+		r.stamp(w)
+
 		if err := r.store.RegisterWorkload(ctx, w); err != nil {
 			r.logger.Error("failed to register workload", "workload", w.GetId(), "error", err)
 
@@ -290,19 +299,43 @@ func (r *runner) reconcile(ctx context.Context, workQueue chan<- *runtimev1.Work
 		}
 	}
 
-	for id := range storedIDs {
-		if _, exists := seenIDs[id]; !exists {
-			if err := r.store.DeregisterWorkload(ctx, id); err != nil {
-				r.logger.Error("failed to deregister stale workload", "workload", id, "error", err)
-			} else {
-				r.logger.Info("removed stale workload", "workload", id)
-			}
+	// Only remove stale workloads this instance owns; other discovery instances may share the store.
+	for _, w := range stored {
+		id := w.GetId()
+		if _, exists := seenIDs[id]; exists || !r.owns(w) {
+			continue
+		}
+
+		if err := r.store.DeregisterWorkload(ctx, id); err != nil {
+			r.logger.Error("failed to deregister stale workload", "workload", id, "error", err)
+		} else {
+			r.logger.Info("removed stale workload", "workload", id)
 		}
 	}
 
 	r.logger.Info("reconciliation complete", "workloads_registered", len(workloads))
 
 	return nil
+}
+
+// stamp records this discovery instance on the workload when an instance ID is configured.
+func (r *runner) stamp(workload *runtimev1.Workload) {
+	if r.instanceID == "" {
+		return
+	}
+
+	if workload.Annotations == nil {
+		workload.Annotations = make(map[string]string)
+	}
+
+	workload.Annotations[InstanceAnnotation] = r.instanceID
+}
+
+// owns reports whether a stored workload was written by this discovery instance: same runtime
+// and same instance ID, where a workload without the instance annotation has an empty instance ID.
+func (r *runner) owns(workload *runtimev1.Workload) bool {
+	return workload.GetRuntime() == string(r.adapter.Type()) &&
+		workload.GetAnnotations()[InstanceAnnotation] == r.instanceID
 }
 
 // handleRuntimeEvent processes a runtime event.
@@ -315,6 +348,8 @@ func (r *runner) handleRuntimeEvent(ctx context.Context, workQueue chan<- *runti
 
 	switch event.Type {
 	case types.RuntimeEventTypeAdded, types.RuntimeEventTypeModified:
+		r.stamp(event.Workload)
+
 		if err := r.store.RegisterWorkload(ctx, event.Workload); err != nil {
 			r.logger.Error("failed to register workload", "workload", workloadID, "error", err)
 
