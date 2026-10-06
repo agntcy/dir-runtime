@@ -174,14 +174,22 @@ One file per process at `<dir>/<id>.json`; the file name without `.json` is the 
 |-------|----------|-------------|
 | `name` | yes | Workload name |
 | `pid` | yes | Process ID; the workload is listed only while this process is alive |
-| `ports` | yes | Ports the process listens on (strings or numbers) |
+| `ports` | no | Ports the process listens on (strings or numbers); the A2A resolver only probes workloads with ports |
 | `labels` | no | Must include `org.agntcy/discover=true`; resolver labels work as for containers |
-| `annotations` | no | E.g. `org.agntcy/agent-record` |
+| `annotations` | no | E.g. `org.agntcy/agent-record`, `org.agntcy/locator` |
 | `addresses` | no | Defaults to `["127.0.0.1"]` |
 
 Discovery sets `runtime` and `type` to `process`, `hostname` to the host name, and `isolationGroups` to `["host"]`.
 
-Write descriptors atomically (write a dotfile or `<id>.json.tmp`, then rename it to `<id>.json`) and delete them on clean shutdown. Discovery never modifies or removes descriptor files. Anyone who can write to the directory can register a workload, so keep it private to the user (discovery creates it with mode `0700`).
+#### Locators
+
+An agent that is not reachable over an HTTP address and port (for example one served over SLIM) can omit `ports` and publish its protocol endpoint in the `org.agntcy/locator` annotation, e.g. `"org.agntcy/locator": "slim://org/namespace/agent"`. Discovery passes annotations through unchanged; the A2A resolver skips workloads without ports, while the OASF resolver still resolves `org.agntcy/agent-record`.
+
+#### Trust
+
+A descriptor is an unauthenticated claim: discovery checks that the PID is alive, not that the process is the agent its descriptor or record names. Anyone who can write to the directory can register a workload, so keep it private to the user (discovery creates it with mode `0700`). Consumers that need to know an instance is genuine must verify it themselves, e.g. by probing the agent and checking a reply signed with the key its record names (see [#94](https://github.com/agntcy/dir-runtime/issues/94)).
+
+Write descriptors atomically (write a dotfile or `<id>.json.tmp`, then rename it to `<id>.json`) and delete them on clean shutdown. Discovery never modifies or removes descriptor files.
 
 #### Run Locally
 
@@ -198,7 +206,7 @@ mkdir -p -m 700 ~/.agntcy/dir-runtime/workloads.d
 # Start discovery and server, sharing a SQLite store
 DISCOVERY_RUNTIME_TYPE=process DISCOVERY_STORE_TYPE=sqlite DISCOVERY_RESOLVER_OASF_ENABLED=false \
   go -C discovery run ./cmd &
-SERVER_STORE_TYPE=sqlite go -C server run ./cmd &
+SERVER_HOST=127.0.0.1 SERVER_STORE_TYPE=sqlite go -C server run ./cmd &
 
 # Announce the agent
 cat > ~/.agntcy/dir-runtime/workloads.d/hello-agent.json <<EOF
@@ -218,6 +226,8 @@ kill $AGENT_PID
 ```
 
 To resolve OASF records from a local Directory (`dirctl daemon start`), drop `DISCOVERY_RESOLVER_OASF_ENABLED=false`, set `DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888` and `DIRECTORY_CLIENT_AUTH_MODE=insecure`, and add `"org.agntcy/agent-record": "<cid or name:version>"` to the descriptor's labels or annotations.
+
+The server is bound to `127.0.0.1` here because it has no authentication: with the default `SERVER_HOST=0.0.0.0` anyone who can reach the machine can list its workloads. To share workloads with other machines, put transport security and access control in front of the server, and list addresses or locators in the descriptors that those machines can reach (the `127.0.0.1` default is only reachable locally).
 
 The walkthrough uses SQLite so no extra service is needed; etcd works the same way by running etcd and setting `DISCOVERY_STORE_TYPE=etcd` and `SERVER_STORE_TYPE=etcd`.
 
