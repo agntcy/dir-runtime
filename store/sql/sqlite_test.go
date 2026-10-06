@@ -281,3 +281,15 @@ func TestNewSqliteRelativePath(t *testing.T) {
 		t.Errorf("database not created relative to working directory: %v", err)
 	}
 }
+
+func TestStoreCloseClosesPool(t *testing.T) {
+	s := newTestStore(t, filepath.Join(t.TempDir(), "workloads.db"))
+
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	if _, err := s.ListWorkloads(context.Background()); err == nil || !strings.Contains(err.Error(), "database is closed") {
+		t.Errorf("ListWorkloads() after Close error = %v, want 'database is closed'", err)
+	}
+}

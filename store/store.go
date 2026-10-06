@@ -30,6 +30,10 @@ func New(cfg config.Config) (types.Store, error) {
 
 		store, err := sql.New(db)
 		if err != nil {
+			if sqlDB, dbErr := db.DB(); dbErr == nil {
+				_ = sqlDB.Close()
+			}
+
 			return nil, fmt.Errorf("failed to initialize sqlite store: %w", err)
 		}
 

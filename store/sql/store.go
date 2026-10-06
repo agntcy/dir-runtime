@@ -35,8 +35,17 @@ func New(db *gorm.DB) (types.Store, error) {
 	return &store{db: db}, nil
 }
 
-// Close closes the connection.
+// Close closes the underlying connection pool.
 func (s *store) Close() error {
+	sqlDB, err := s.db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get database connection: %w", err)
+	}
+
+	if err := sqlDB.Close(); err != nil {
+		return fmt.Errorf("failed to close database connection: %w", err)
+	}
+
 	return nil
 }
 
