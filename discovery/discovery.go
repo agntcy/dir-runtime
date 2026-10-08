@@ -318,9 +318,13 @@ func (r *runner) reconcile(ctx context.Context, workQueue chan<- *runtimev1.Work
 	return nil
 }
 
-// stamp records this discovery instance on the workload when an instance ID is configured.
+// stamp records this discovery instance on the workload. The instance annotation is reserved
+// for discovery: a value supplied by the runtime (e.g. a descriptor or pod annotation) is
+// replaced, or removed when no instance ID is configured, so it cannot claim another owner.
 func (r *runner) stamp(workload *runtimev1.Workload) {
 	if r.instanceID == "" {
+		delete(workload.GetAnnotations(), InstanceAnnotation)
+
 		return
 	}
 

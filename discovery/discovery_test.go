@@ -178,3 +178,49 @@ func TestHandleRuntimeEventStampsInstance(t *testing.T) {
 	assert.Equal(t, "host-a", stored.GetAnnotations()[InstanceAnnotation])
 	assert.Equal(t, "host-a", (<-queue).GetAnnotations()[InstanceAnnotation], "resolvers must see the stamped workload")
 }
+
+func TestReconcileOverridesRuntimeSuppliedInstanceAnnotation(t *testing.T) {
+	for _, instanceID := range []string{"", "host-a"} {
+		t.Run("instance="+instanceID, func(t *testing.T) {
+			s := newTestStore(t)
+			spoofed := workload("agent", process, "someone-else")
+
+			reconcile(t, newTestRunner(t, s, process, instanceID, spoofed))
+
+			stored, err := s.GetWorkload(context.Background(), "agent")
+			require.NoError(t, err)
+
+			got, ok := stored.GetAnnotations()[InstanceAnnotation]
+			if instanceID == "" {
+				assert.False(t, ok, "reserved annotation must be removed without an instance ID, got %q", got)
+			} else {
+				assert.Equal(t, instanceID, got)
+			}
+		})
+	}
+}
+
+func TestReconcileRemovesStaleWorkloadThatSuppliedInstanceAnnotation(t *testing.T) {
+	s := newTestStore(t)
+
+	// First run: the runtime reports a workload that carries the reserved annotation itself.
+	reconcile(t, newTestRunner(t, s, process, "", workload("agent", process, "someone-else")))
+
+	// Second run: the workload is gone, so the default instance must remove it.
+	reconcile(t, newTestRunner(t, s, process, ""))
+
+	assert.Empty(t, storedIDs(t, s))
+}
+
+func TestHandleRuntimeEventOverridesRuntimeSuppliedInstanceAnnotation(t *testing.T) {
+	s := newTestStore(t)
+	r := newTestRunner(t, s, process, "")
+	queue := make(chan *runtimev1.Workload, 1)
+
+	added := workload("agent", process, "someone-else")
+	r.handleRuntimeEvent(context.Background(), queue, &types.RuntimeEvent{Type: types.RuntimeEventTypeAdded, Workload: added})
+
+	stored, err := s.GetWorkload(context.Background(), "agent")
+	require.NoError(t, err)
+	assert.NotContains(t, stored.GetAnnotations(), InstanceAnnotation)
+}
