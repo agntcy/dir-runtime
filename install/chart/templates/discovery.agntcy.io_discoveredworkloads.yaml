@@ -27,11 +27,16 @@ spec:
     - jsonPath: .spec.workload_type
       name: Type
       type: string
+    - jsonPath: .spec.locators[*].url
+      name: Locators
+      type: string
     - jsonPath: .spec.addresses
       name: Addresses
+      priority: 1
       type: string
     - jsonPath: .spec.ports
       name: Ports
+      priority: 1
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -63,7 +68,11 @@ spec:
             description: Information about a discovered workload in a runtime.
             properties:
               addresses:
-                description: Addresses are the network addresses of the workload.
+                description: |-
+                  Addresses are the network addresses of the workload.
+                  Deprecated: use locators, which embed the address in each endpoint URL.
+
+                  Deprecated: Marked as deprecated in agntcy/dir/runtime/v1/workload.proto.
                 items:
                   type: string
                 type: array
@@ -88,6 +97,25 @@ spec:
                   type: string
                 description: Labels are key-value pairs for filtering.
                 type: object
+              locators:
+                description: |-
+                  Locators are the endpoints the workload can be reached at,
+                  one per protocol endpoint (e.g., an HTTP URL per network address, a SLIM name).
+                items:
+                  description: WorkloadLocator is an endpoint a workload can be reached
+                    at.
+                  properties:
+                    protocol:
+                      description: Protocol is the transport or protocol of the endpoint
+                        (e.g., http, grpc, slim).
+                      type: string
+                    url:
+                      description: |-
+                        URL is the full endpoint, including scheme
+                        (e.g., "http://10.244.0.9:9999", "slim://org/namespace/agent").
+                      type: string
+                  type: object
+                type: array
               name:
                 description: Name is the human-readable name of the workload.
                 type: string
@@ -95,6 +123,9 @@ spec:
                 description: |-
                   Ports are the exposed ports.
                   Specified as strings to accommodate various formats (e.g., "80/tcp", "443").
+                  Deprecated: use locators, which embed the port in each endpoint URL.
+
+                  Deprecated: Marked as deprecated in agntcy/dir/runtime/v1/workload.proto.
                 items:
                   type: string
                 type: array
