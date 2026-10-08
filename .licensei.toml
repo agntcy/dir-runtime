@@ -26,6 +26,7 @@ ignored = [
   "github.com/muhlemmer/gu", # Unlicense (public domain) https://github.com/muhlemmer/gu/blob/master/LICENSE - transitive dep of zitadel/oidc
   "gitlab.com/gitlab-org/api/client-go", # Apache License 2.0 https://gitlab.com/gitlab-org/api/client-go/-/blob/main/LICENSE
   "google.golang.org/protobuf", # BSD-3-Clause
+  "lukechampine.com/blake3", # MIT https://github.com/lukechampine/blake3/blob/master/LICENSE - vanity import domain intermittently unreachable, breaking license lookup
   "modernc.org/libc", # BSD-3-Clause https://gitlab.com/cznic/libc/-/blob/master/LICENSE
   "modernc.org/mathutil", # BSD-3-Clause https://gitlab.com/cznic/mathutil/-/blob/master/LICENSE
   "modernc.org/memory", # BSD-3-Clause https://gitlab.com/cznic/memory/-/blob/master/LICENSE
