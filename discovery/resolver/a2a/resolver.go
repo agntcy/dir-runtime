@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -55,8 +56,8 @@ func (r *resolver) CanResolve(workload *runtimev1.Workload) bool {
 		return false
 	}
 
-	// Only resolve workloads with addresses and ports
-	return len(workload.GetAddresses()) > 0 && len(workload.GetPorts()) > 0
+	// Only resolve workloads with an endpoint that can serve HTTP
+	return len(probeOrigins(workload)) > 0
 }
 
 // Resolve probes A2A endpoints on the workload.
@@ -66,12 +67,9 @@ func (r *resolver) Resolve(ctx context.Context, workload *runtimev1.Workload) (a
 	// Build list of URLs to try
 	var urls []string
 
-	for _, addr := range workload.GetAddresses() {
-		for _, port := range workload.GetPorts() {
-			for _, path := range r.paths {
-				urls = append(urls, fmt.Sprintf("http://%s:%s%s", addr, port, path))
-				urls = append(urls, fmt.Sprintf("https://%s:%s%s", addr, port, path))
-			}
+	for _, origin := range probeOrigins(workload) {
+		for _, path := range r.paths {
+			urls = append(urls, origin+path)
 		}
 	}
 
@@ -135,4 +133,33 @@ func (r *resolver) probeURL(ctx context.Context, url string) map[string]any {
 	}
 
 	return result
+}
+
+// probeOrigins returns the HTTP(S) origins (scheme://host:port) to probe for a workload's locators.
+// A tcp locator's application protocol is unknown, so both http and https are tried;
+// http and https locators are probed with their own scheme; other protocols are skipped.
+func probeOrigins(workload *runtimev1.Workload) []string {
+	var origins []string
+
+	for _, locator := range workload.GetLocators() {
+		u, err := url.Parse(locator.GetUrl())
+		if err != nil || u.Host == "" {
+			continue
+		}
+
+		var schemes []string
+
+		switch strings.ToLower(u.Scheme) {
+		case types.LocatorProtocolTCP:
+			schemes = []string{"http", "https"}
+		case "http", "https":
+			schemes = []string{strings.ToLower(u.Scheme)}
+		}
+
+		for _, scheme := range schemes {
+			origins = append(origins, scheme+"://"+u.Host)
+		}
+	}
+
+	return origins
 }
