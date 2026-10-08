@@ -231,7 +231,16 @@ The server is bound to `127.0.0.1` here because it has no authentication: with t
 
 The walkthrough uses SQLite so no extra service is needed; etcd works the same way by running etcd and setting `DISCOVERY_STORE_TYPE=etcd` and `SERVER_STORE_TYPE=etcd`.
 
-> **Note:** Each discovery instance must use its own store (or SQLite path), with its own server reading it. On startup, discovery removes every stored workload its runtime does not currently report, so running e.g. Docker and process discovery against the same store makes them delete each other's workloads.
+Docker and process discovery on the same machine can share one store and one server: on startup each instance only removes stale workloads of its own runtime. See [Sharing a Store](#sharing-a-store) for several instances of the same runtime.
+
+### Sharing a Store
+
+Several discovery instances can write to the same store, and one server then lists all their workloads. On startup, discovery removes stored workloads its runtime no longer reports, but only those it owns: workloads of the same runtime type and the same instance ID.
+
+- **Different runtimes** (e.g. Docker and process discovery on one machine) need no configuration.
+- **Several instances of the same runtime** (e.g. Docker discovery on two hosts writing to one etcd) must each set a unique, stable `DISCOVERY_INSTANCE_ID`. Discovery records it on every workload it writes in the `org.agntcy/discovery-instance` annotation. The annotation is reserved: a value supplied by the workload itself (e.g. in a process descriptor or pod annotations) is replaced, or removed when no instance ID is set. Do not derive it from a container or pod hostname, since those change when the container is recreated and the new instance would no longer clean up the old one's workloads.
+
+Workload IDs must be unique across all instances sharing a store; an instance that reports an existing ID overwrites that workload. Container IDs and pod UIDs are unique in practice; for the process runtime, use descriptor file names that are unique across hosts (e.g. a UUID or `<host>-<agent>`).
 
 ## Workload Labels
 
@@ -310,6 +319,7 @@ Discovered workloads have a `services` field that holds metadata extracted by re
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
 | `DISCOVERY_WORKERS` | Number of resolver workers | `16` |
+| `DISCOVERY_INSTANCE_ID` | Instance ID that scopes workload cleanup when several instances of the same runtime share a store (see [Sharing a Store](#sharing-a-store)) | `` |
 | `DISCOVERY_STORE_TYPE` | Storage type (`etcd`, `crd`, `sqlite`) | `etcd` |
 | `DISCOVERY_STORE_ETCD_HOST` | etcd server hostname | `localhost` |
 | `DISCOVERY_STORE_ETCD_PORT` | etcd server port | `2379` |
