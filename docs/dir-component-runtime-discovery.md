@@ -54,7 +54,7 @@ Choose the storage backend based on where the components run:
 
 - **[etcd](https://etcd.io/)** is recommended in non-Kubernetes environments where discovery and server run as separate services (e.g. Docker Compose or across hosts), since both only need network access to etcd.
 - **CRDs** can be used in Kubernetes environments for a more native experience, so clients can query workloads via both gRPC and the Kubernetes API.
-- **SQLite** (`sqlite`) suits a single host where discovery and server run as local binaries, e.g. a developer machine. They share a database file instead of requiring an etcd instance, so both must be configured with the same path.
+- **SQLite** (`sqlite`) suits a single host where discovery and server run as local binaries, e.g. a developer machine. They share a database file instead of requiring an etcd instance, so both must be configured with the same path. The file is opened in WAL mode, so several processes can use it at once: readers don't block the writer, and writes are serialized (one writer at a time, others wait up to 5s). This only works for processes on the same host using a local filesystem; don't put the file on a network filesystem (e.g. NFS) or share it between containers through Docker Desktop bind mounts, where file locking is unreliable. Use etcd in those cases.
 
 ```mermaid
 flowchart LR
