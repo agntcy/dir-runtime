@@ -23,13 +23,17 @@ func New(cfg config.Config) (types.Store, error) {
 	case crd.StoreType:
 		return crd.New(cfg.CRD)
 	case sql.StoreTypeSqlite:
-		db, err := sql.NewSqlite()
+		db, err := sql.NewSqlite(cfg.SQLite)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create sqlite connection: %w", err)
 		}
 
 		store, err := sql.New(db)
 		if err != nil {
+			if sqlDB, dbErr := db.DB(); dbErr == nil {
+				_ = sqlDB.Close()
+			}
+
 			return nil, fmt.Errorf("failed to initialize sqlite store: %w", err)
 		}
 

@@ -50,8 +50,11 @@ The discovery component is responsible for:
 
 The storage backend can be used to expose discovered workloads to other components (e.g., clients/servers) without coupling them directly and to reduce attack surface.
 
-In non-Kubernetes environments, [etcd](https://etcd.io/) is recommended as the storage backend for better portability.
-In Kubernetes environments, CRDs can be used for a more native experience to ensure clients can query workloads via both gRPC and the Kubernetes API.
+Choose the storage backend based on where the components run:
+
+- **[etcd](https://etcd.io/)** is recommended in non-Kubernetes environments where discovery and server run as separate services (e.g. Docker Compose or across hosts), since both only need network access to etcd.
+- **CRDs** can be used in Kubernetes environments for a more native experience, so clients can query workloads via both gRPC and the Kubernetes API.
+- **SQLite** (`sqlite`) suits a single host where discovery and server run as local binaries, e.g. a developer machine. They share a database file instead of requiring an etcd instance, so both must be configured with the same path. The file is opened in WAL mode, so several processes can use it at once: readers don't block the writer, and writes are serialized (one writer at a time, others wait up to 5s). This only works for processes on the same host using a local filesystem; don't put the file on a network filesystem (e.g. NFS) or share it between containers through Docker Desktop bind mounts, where file locking is unreliable. Use etcd in those cases.
 
 ```mermaid
 flowchart LR
@@ -234,7 +237,7 @@ Discovered workloads have a `services` field that holds metadata extracted by re
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
 | `DISCOVERY_WORKERS` | Number of resolver workers | `16` |
-| `DISCOVERY_STORE_TYPE` | Storage type (`etcd`, `crd`) | `etcd` |
+| `DISCOVERY_STORE_TYPE` | Storage type (`etcd`, `crd`, `sqlite`) | `etcd` |
 | `DISCOVERY_STORE_ETCD_HOST` | etcd server hostname | `localhost` |
 | `DISCOVERY_STORE_ETCD_PORT` | etcd server port | `2379` |
 | `DISCOVERY_STORE_ETCD_USERNAME` | etcd username for authentication | `` |
@@ -244,6 +247,7 @@ Discovered workloads have a `services` field that holds metadata extracted by re
 | `DISCOVERY_STORE_CRD_NAMESPACE` | Namespace to store workloads in | `default` |
 | `DISCOVERY_STORE_CRD_KUBECONFIG` | Path to kubeconfig file (empty for in-cluster) | `` |
 | `DISCOVERY_STORE_CRD_RESYNC_PERIOD` | How often to resync the cache from the API server | `30s` |
+| `DISCOVERY_STORE_SQLITE_PATH` | SQLite database file shared with the server (`~` expands to home) | `~/.agntcy/dir-runtime/workloads.db` |
 | `DISCOVERY_RUNTIME_TYPE` | Runtime type (`docker`, `kubernetes`) | `docker` |
 | `DISCOVERY_RUNTIME_DOCKER_HOST` | Docker daemon socket path | `unix:///var/run/docker.sock` |
 | `DISCOVERY_RUNTIME_DOCKER_LABEL_KEY` | Label key to filter containers | `org.agntcy/discover` |
@@ -275,7 +279,7 @@ When a workload has the configured OASF resolver label, the resolver attempts to
 |---------------------|-------------|---------|
 | `SERVER_HOST` | Server bind address | `0.0.0.0` |
 | `SERVER_PORT` | Server listen port | `8080` |
-| `SERVER_STORE_TYPE` | Storage type (`etcd`, `crd`) | `etcd` |
+| `SERVER_STORE_TYPE` | Storage type (`etcd`, `crd`, `sqlite`) | `etcd` |
 | `SERVER_STORE_ETCD_HOST` | etcd server hostname | `localhost` |
 | `SERVER_STORE_ETCD_PORT` | etcd server port | `2379` |
 | `SERVER_STORE_ETCD_USERNAME` | etcd username for authentication | `` |
@@ -285,6 +289,7 @@ When a workload has the configured OASF resolver label, the resolver attempts to
 | `SERVER_STORE_CRD_NAMESPACE` | Namespace to read workloads from | `default` |
 | `SERVER_STORE_CRD_KUBECONFIG` | Path to kubeconfig file (empty for in-cluster) | `` |
 | `SERVER_STORE_CRD_RESYNC_PERIOD` | How often to resync the cache from the API server | `30s` |
+| `SERVER_STORE_SQLITE_PATH` | SQLite database file shared with discovery (`~` expands to home) | `~/.agntcy/dir-runtime/workloads.db` |
 
 
 ## gRPC API
