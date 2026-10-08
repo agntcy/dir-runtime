@@ -393,9 +393,8 @@ func (k *adapter) podToWorkload(pod *corev1.Pod, services []*corev1.Service) *ru
 		Hostname:        hostname,
 		Runtime:         runtimev1.RuntimeType_RUNTIME_TYPE_KUBERNETES.GetName(),
 		Type:            runtimev1.WorkloadType_WORKLOAD_TYPE_POD.GetName(),
-		Addresses:       addresses,
+		Locators:        types.TCPLocators(addresses, ports),
 		IsolationGroups: []string{namespace},
-		Ports:           ports,
 		Labels:          labels,
 		Annotations:     annotations,
 	}

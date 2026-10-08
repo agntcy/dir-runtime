@@ -66,56 +66,57 @@ func TestResolver_CanResolve(t *testing.T) {
 		want     bool
 	}{
 		{
-			name: "can resolve workload with matching label and addresses/ports",
+			name: "can resolve workload with matching label and tcp locator",
 			workload: &runtimev1.Workload{
-				Labels:    map[string]string{"org.agntcy/agent-type": "a2a"},
-				Addresses: []string{"localhost"},
-				Ports:     []string{"8080"},
+				Labels:   map[string]string{"org.agntcy/agent-type": "a2a"},
+				Locators: []*runtimev1.WorkloadLocator{{Protocol: "tcp", Url: "tcp://localhost:8080"}},
+			},
+			want: true,
+		},
+		{
+			name: "can resolve workload with http locator",
+			workload: &runtimev1.Workload{
+				Labels:   map[string]string{"org.agntcy/agent-type": "a2a"},
+				Locators: []*runtimev1.WorkloadLocator{{Protocol: "http", Url: "http://localhost:8080"}},
 			},
 			want: true,
 		},
 		{
 			name: "cannot resolve workload without label",
 			workload: &runtimev1.Workload{
-				Labels:    map[string]string{},
-				Addresses: []string{"localhost"},
-				Ports:     []string{"8080"},
+				Labels:   map[string]string{},
+				Locators: []*runtimev1.WorkloadLocator{{Protocol: "tcp", Url: "tcp://localhost:8080"}},
 			},
 			want: false,
 		},
 		{
 			name: "cannot resolve workload with wrong label value",
 			workload: &runtimev1.Workload{
-				Labels:    map[string]string{"org.agntcy/agent-type": "other"},
-				Addresses: []string{"localhost"},
-				Ports:     []string{"8080"},
+				Labels:   map[string]string{"org.agntcy/agent-type": "other"},
+				Locators: []*runtimev1.WorkloadLocator{{Protocol: "tcp", Url: "tcp://localhost:8080"}},
 			},
 			want: false,
 		},
 		{
-			name: "cannot resolve workload without addresses",
+			name: "cannot resolve workload without locators",
 			workload: &runtimev1.Workload{
-				Labels:    map[string]string{"org.agntcy/agent-type": "a2a"},
-				Addresses: []string{},
-				Ports:     []string{"8080"},
+				Labels: map[string]string{"org.agntcy/agent-type": "a2a"},
 			},
 			want: false,
 		},
 		{
-			name: "cannot resolve workload without ports",
+			name: "cannot resolve workload with only non-HTTP locators",
 			workload: &runtimev1.Workload{
-				Labels:    map[string]string{"org.agntcy/agent-type": "a2a"},
-				Addresses: []string{"localhost"},
-				Ports:     []string{},
+				Labels:   map[string]string{"org.agntcy/agent-type": "a2a"},
+				Locators: []*runtimev1.WorkloadLocator{{Protocol: "slim", Url: "slim://org/namespace/agent"}},
 			},
 			want: false,
 		},
 		{
 			name: "case insensitive label value match",
 			workload: &runtimev1.Workload{
-				Labels:    map[string]string{"org.agntcy/agent-type": "A2A"},
-				Addresses: []string{"localhost"},
-				Ports:     []string{"8080"},
+				Labels:   map[string]string{"org.agntcy/agent-type": "A2A"},
+				Locators: []*runtimev1.WorkloadLocator{{Protocol: "tcp", Url: "tcp://localhost:8080"}},
 			},
 			want: true,
 		},
@@ -161,10 +162,9 @@ func TestResolver_Resolve(t *testing.T) {
 		// We need to use the test server's actual address
 		// Parse the URL to get host:port
 		workload := &runtimev1.Workload{
-			Id:        "test-workload",
-			Labels:    map[string]string{"test": "true"},
-			Addresses: []string{"127.0.0.1"},
-			Ports:     []string{server.URL[len("http://127.0.0.1:"):]}, // Extract port
+			Id:       "test-workload",
+			Labels:   map[string]string{"test": "true"},
+			Locators: []*runtimev1.WorkloadLocator{{Protocol: "tcp", Url: "tcp://" + server.Listener.Addr().String()}},
 		}
 
 		ctx := context.Background()
@@ -186,10 +186,9 @@ func TestResolver_Resolve(t *testing.T) {
 
 	t.Run("returns error when no endpoints reachable", func(t *testing.T) {
 		workload := &runtimev1.Workload{
-			Id:        "test-workload",
-			Labels:    map[string]string{"test": "true"},
-			Addresses: []string{"127.0.0.1"},
-			Ports:     []string{"99999"}, // Invalid port
+			Id:       "test-workload",
+			Labels:   map[string]string{"test": "true"},
+			Locators: []*runtimev1.WorkloadLocator{{Protocol: "tcp", Url: "tcp://127.0.0.1:99999"}}, // Invalid port
 		}
 
 		ctx := context.Background()
@@ -200,12 +199,43 @@ func TestResolver_Resolve(t *testing.T) {
 		}
 	})
 
+	t.Run("resolves from http locator and skips non-HTTP locators", func(t *testing.T) {
+		workload := &runtimev1.Workload{
+			Id:     "test-workload",
+			Labels: map[string]string{"test": "true"},
+			Locators: []*runtimev1.WorkloadLocator{
+				{Protocol: "slim", Url: "slim://org/namespace/agent"},
+				{Protocol: "http", Url: server.URL},
+			},
+		}
+
+		result, err := r.Resolve(context.Background(), workload)
+		if err != nil {
+			t.Fatalf("Resolve() error = %v", err)
+		}
+
+		if resultMap, _ := result.(map[string]any); resultMap["name"] != "test-agent" {
+			t.Errorf("Result = %v, want agent card", result)
+		}
+	})
+
+	t.Run("https locator is not probed over plain http", func(t *testing.T) {
+		workload := &runtimev1.Workload{
+			Id:       "test-workload",
+			Labels:   map[string]string{"test": "true"},
+			Locators: []*runtimev1.WorkloadLocator{{Protocol: "https", Url: "https://" + server.Listener.Addr().String()}},
+		}
+
+		if _, err := r.Resolve(context.Background(), workload); err == nil {
+			t.Error("Resolve() should fail: the test server only speaks plain http")
+		}
+	})
+
 	t.Run("respects context cancellation", func(t *testing.T) {
 		workload := &runtimev1.Workload{
-			Id:        "test-workload",
-			Labels:    map[string]string{"test": "true"},
-			Addresses: []string{"127.0.0.1"},
-			Ports:     []string{"8080"},
+			Id:       "test-workload",
+			Labels:   map[string]string{"test": "true"},
+			Locators: []*runtimev1.WorkloadLocator{{Protocol: "tcp", Url: "tcp://127.0.0.1:8080"}},
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
