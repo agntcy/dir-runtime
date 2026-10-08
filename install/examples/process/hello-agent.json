@@ -1,0 +1,13 @@
+{
+  "name": "hello-agent",
+  "pid": 12345,
+  "labels": {
+    "org.agntcy/discover": "true",
+    "org.agntcy/agent-type": "a2a"
+  },
+  "annotations": {
+    "org.agntcy/agent-record": "my-agent:v1.0.0"
+  },
+  "addresses": ["127.0.0.1"],
+  "ports": ["9999"]
+}

@@ -13,6 +13,7 @@ import (
 	runtime "github.com/agntcy/dir-runtime/discovery/runtime/config"
 	"github.com/agntcy/dir-runtime/discovery/runtime/docker"
 	"github.com/agntcy/dir-runtime/discovery/runtime/k8s"
+	"github.com/agntcy/dir-runtime/discovery/runtime/process"
 	store "github.com/agntcy/dir-runtime/store/config"
 	"github.com/agntcy/dir-runtime/store/crd"
 	"github.com/agntcy/dir-runtime/store/etcd"
@@ -39,6 +40,10 @@ func TestConfig(t *testing.T) {
 				"DISCOVERY_RUNTIME_KUBERNETES_NAMESPACE":   "namespace",
 				"DISCOVERY_RUNTIME_KUBERNETES_LABEL_KEY":   "custom.label/key",
 				"DISCOVERY_RUNTIME_KUBERNETES_LABEL_VALUE": "custom.label/value",
+				"DISCOVERY_RUNTIME_PROCESS_DIR":            "/custom/workloads.d",
+				"DISCOVERY_RUNTIME_PROCESS_POLL_INTERVAL":  "5s",
+				"DISCOVERY_RUNTIME_PROCESS_LABEL_KEY":      "custom.process/discover",
+				"DISCOVERY_RUNTIME_PROCESS_LABEL_VALUE":    "yes",
 				"DISCOVERY_STORE_TYPE":                     "etcd",
 				"DISCOVERY_STORE_ETCD_HOST":                "etcd.example.com",
 				"DISCOVERY_STORE_ETCD_PORT":                "2380",
@@ -73,6 +78,12 @@ func TestConfig(t *testing.T) {
 						Namespace:  "namespace",
 						LabelKey:   "custom.label/key",
 						LabelValue: "custom.label/value",
+					},
+					Process: process.Config{
+						Dir:          "/custom/workloads.d",
+						PollInterval: 5 * time.Second,
+						LabelKey:     "custom.process/discover",
+						LabelValue:   "yes",
 					},
 				},
 				Store: store.Config{
@@ -127,6 +138,12 @@ func TestConfig(t *testing.T) {
 						Namespace:  k8s.DefaultNamespace,
 						LabelKey:   k8s.DefaultLabelKey,
 						LabelValue: k8s.DefaultLabelValue,
+					},
+					Process: process.Config{
+						Dir:          process.DefaultDir,
+						PollInterval: process.DefaultPollInterval,
+						LabelKey:     process.DefaultLabelKey,
+						LabelValue:   process.DefaultLabelValue,
 					},
 				},
 				Store: store.Config{
