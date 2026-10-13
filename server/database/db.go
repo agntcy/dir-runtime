@@ -6,20 +6,37 @@ package database
 import (
 	"context"
 	"fmt"
-	"regexp"
 
 	storetypes "github.com/agntcy/dir-runtime/store/types"
 	v1 "github.com/agntcy/dir/api/runtime/v1"
 )
 
 type Database struct {
-	store storetypes.StoreReader
+	store              storetypes.StoreReader
+	acceptedSchemaURLs []string
 }
 
-func NewDatabase(store storetypes.StoreReader) (*Database, error) {
-	return &Database{
+// Option configures a Database.
+type Option func(*Database)
+
+// WithAcceptedSchemaURLs sets the OASF schema servers whose card extensions are read
+// when filtering by agent. When unset, only runtimev1.DefaultOASFSchemaURL is accepted.
+func WithAcceptedSchemaURLs(urls []string) Option {
+	return func(d *Database) {
+		d.acceptedSchemaURLs = urls
+	}
+}
+
+func NewDatabase(store storetypes.StoreReader, opts ...Option) (*Database, error) {
+	db := &Database{
 		store: store,
-	}, nil
+	}
+
+	for _, opt := range opts {
+		opt(db)
+	}
+
+	return db, nil
 }
 
 func (d *Database) Count(ctx context.Context) int {
@@ -41,49 +58,36 @@ func (d *Database) Get(ctx context.Context, id string) (*v1.Workload, error) {
 	return workload, nil
 }
 
-func (d *Database) List(ctx context.Context, labelFilter map[string]string) ([]*v1.Workload, error) {
+// List returns the workloads matching every filter of req, as documented on
+// ListWorkloadsRequest. A nil request matches every workload.
+func (d *Database) List(ctx context.Context, req *v1.ListWorkloadsRequest) ([]*v1.Workload, error) {
 	// Fetch all workloads
 	result, err := d.store.ListWorkloads(ctx)
 	if err != nil {
 		return []*v1.Workload{}, fmt.Errorf("failed to list workloads: %w", err)
 	}
 
-	// Filter workloads by labels
+	opts := v1.FilterOptions{AcceptedSchemaURLs: d.acceptedSchemaURLs}
+
+	// The reference workload of a reachability filter is one of the listed workloads;
+	// if none has its ID, nothing matches.
+	if req.ReachableFromWorkloadId != nil {
+		for _, workload := range result {
+			if workload.GetId() == req.GetReachableFromWorkloadId() {
+				opts.ReachableFrom = workload
+
+				break
+			}
+		}
+	}
+
 	var filtered []*v1.Workload
 
 	for _, workload := range result {
-		if matchesLabelFilter(workload, labelFilter) {
+		if workload.MatchesFilters(req, opts) {
 			filtered = append(filtered, workload)
 		}
 	}
 
 	return filtered, nil
-}
-
-// matchesLabelFilter checks if a workload matches the provided label filters.
-// Label values support regular expression syntax.
-func matchesLabelFilter(workload *v1.Workload, filters map[string]string) bool {
-	if len(filters) == 0 {
-		return true
-	}
-
-	for key, pattern := range filters {
-		value, exists := workload.GetLabels()[key]
-		if !exists {
-			return false
-		}
-
-		// Try to match as regex
-		matched, err := regexp.MatchString(pattern, value)
-		if err != nil {
-			// If pattern is invalid, fall back to exact match
-			if value != pattern {
-				return false
-			}
-		} else if !matched {
-			return false
-		}
-	}
-
-	return true
 }

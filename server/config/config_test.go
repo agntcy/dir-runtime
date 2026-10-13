@@ -11,6 +11,7 @@ import (
 	"github.com/agntcy/dir-runtime/store/crd"
 	"github.com/agntcy/dir-runtime/store/etcd"
 	"github.com/agntcy/dir-runtime/store/sql"
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,10 +38,12 @@ func TestConfig(t *testing.T) {
 				"SERVER_STORE_CRD_KUBECONFIG":        "crd-kubeconfig",
 				"SERVER_STORE_CRD_RESYNC_PERIOD":     "15s",
 				"SERVER_STORE_SQLITE_PATH":           "/custom/workloads.db",
+				"SERVER_OASF_SCHEMA_URLS":            "https://schema.oasf.outshift.com,http://localhost:8080",
 			},
 			ExpectedConfig: &Config{
-				Host: "192.168.1.100",
-				Port: 9090,
+				Host:           "192.168.1.100",
+				Port:           9090,
+				OASFSchemaURLs: []string{"https://schema.oasf.outshift.com", "http://localhost:8080"},
 				Store: store.Config{
 					Type: etcd.StoreType,
 					Etcd: etcd.Config{
@@ -66,8 +69,9 @@ func TestConfig(t *testing.T) {
 			Name:    "Default config",
 			EnvVars: map[string]string{},
 			ExpectedConfig: &Config{
-				Host: DefaultServerHost,
-				Port: DefaultServerPort,
+				Host:           DefaultServerHost,
+				Port:           DefaultServerPort,
+				OASFSchemaURLs: []string{runtimev1.DefaultOASFSchemaURL},
 				Store: store.Config{
 					Type: DefaultStoreType,
 					Etcd: etcd.Config{

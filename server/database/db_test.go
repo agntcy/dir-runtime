@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	v1 "github.com/agntcy/dir/api/runtime/v1"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // mockStore implements storetypes.StoreReader for testing
@@ -192,7 +193,7 @@ func TestDatabase_List(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := db.List(context.Background(), tt.filters)
+			got, err := db.List(context.Background(), &v1.ListWorkloadsRequest{Labels: tt.filters})
 			if err != nil {
 				t.Fatalf("List() error = %v", err)
 			}
@@ -224,7 +225,9 @@ func TestDatabase_List(t *testing.T) {
 	}
 }
 
-func TestMatchesLabelFilter(t *testing.T) {
+// TestLabelFilterSemantics guards the label matching dir-runtime has always offered
+// (regular expressions, all labels required), now evaluated by Workload.MatchesFilters.
+func TestLabelFilterSemantics(t *testing.T) {
 	tests := []struct {
 		name     string
 		workload *v1.Workload
@@ -277,9 +280,90 @@ func TestMatchesLabelFilter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := matchesLabelFilter(tt.workload, tt.filters); got != tt.want {
-				t.Errorf("matchesLabelFilter() = %v, want %v", got, tt.want)
+			got := tt.workload.MatchesFilters(&v1.ListWorkloadsRequest{Labels: tt.filters}, v1.FilterOptions{})
+			if got != tt.want {
+				t.Errorf("MatchesFilters() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func agentCard(t *testing.T, schemaURL string, skill string) *structpb.Struct {
+	t.Helper()
+	card, err := structpb.NewStruct(map[string]any{
+		"name": "agent-" + skill,
+		"capabilities": map[string]any{"extensions": []any{map[string]any{
+			"uri": schemaURL + "/1.1.0/objects/discovery",
+			"params": map[string]any{
+				"schema_version": "1.1.0",
+				"skills":         []any{map[string]any{"name": skill, "id": 1}},
+			},
+		}}},
+	})
+	if err != nil {
+		t.Fatalf("NewStruct: %v", err)
+	}
+	return card
+}
+
+func listIDs(t *testing.T, db *Database, req *v1.ListWorkloadsRequest) []string {
+	t.Helper()
+	got, err := db.List(context.Background(), req)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	ids := make([]string, 0, len(got))
+	for _, w := range got {
+		ids = append(ids, w.GetId())
+	}
+	return ids
+}
+
+func TestDatabase_ListByAgentAndRuntime(t *testing.T) {
+	const local = "http://localhost:8080"
+	workloads := []*v1.Workload{
+		{
+			Id: "a", Runtime: "process", IsolationGroups: []string{"host"},
+			Services: &v1.WorkloadServices{A2A: agentCard(t, v1.DefaultOASFSchemaURL, "software_engineering/code_debugging")},
+		},
+		{
+			Id: "b", Runtime: "docker", IsolationGroups: []string{"net-1"},
+			Services: &v1.WorkloadServices{A2A: agentCard(t, local, "natural_language_processing/summarization")},
+		},
+		{Id: "c", Runtime: "docker", IsolationGroups: []string{"net-1", "host"}},
+	}
+
+	db := newTestDatabase(workloads)
+
+	if got := listIDs(t, db, &v1.ListWorkloadsRequest{Skills: []string{"software_engineering/*"}}); fmt.Sprint(got) != "[a]" {
+		t.Errorf("skill filter = %v, want [a]", got)
+	}
+
+	if got := listIDs(t, db, &v1.ListWorkloadsRequest{Skills: []string{"natural_language_processing/*"}}); len(got) != 0 {
+		t.Errorf("an extension from a schema server that isn't accepted must be ignored, got %v", got)
+	}
+
+	accepting, err := NewDatabase(&mockStore{workloads: workloads}, WithAcceptedSchemaURLs([]string{v1.DefaultOASFSchemaURL, local}))
+	if err != nil {
+		t.Fatalf("NewDatabase: %v", err)
+	}
+	if got := listIDs(t, accepting, &v1.ListWorkloadsRequest{Skills: []string{"natural_language_processing/*"}}); fmt.Sprint(got) != "[b]" {
+		t.Errorf("skill filter with the local schema server accepted = %v, want [b]", got)
+	}
+
+	if got := listIDs(t, db, &v1.ListWorkloadsRequest{RuntimeTypes: []string{"docker"}}); fmt.Sprint(got) != "[b c]" {
+		t.Errorf("runtime filter = %v, want [b c]", got)
+	}
+
+	// a shares the "host" group with c but is a process, not a Docker workload:
+	// isolation groups only count within one runtime and discovery instance.
+	from := "c"
+	if got := listIDs(t, db, &v1.ListWorkloadsRequest{ReachableFromWorkloadId: &from}); fmt.Sprint(got) != "[b]" {
+		t.Errorf("reachable from c = %v, want [b]", got)
+	}
+
+	missing := "nope"
+	if got := listIDs(t, db, &v1.ListWorkloadsRequest{ReachableFromWorkloadId: &missing}); len(got) != 0 {
+		t.Errorf("reachable from an unknown workload = %v, want none", got)
 	}
 }
