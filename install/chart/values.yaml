@@ -195,6 +195,11 @@ server:
     # Server listen port
     port: 8080
 
+    # OASF schema servers whose A2A card extensions are read when filtering workloads
+    # by agent (skills, domains, author). https, or plain http on a loopback host.
+    oasf_schema_urls:
+      - https://schema.oasf.outshift.com
+
     # Store configuration for reading discovered workloads
     store:
       # Storage type: "crd" or "etcd"

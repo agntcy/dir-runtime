@@ -14,6 +14,7 @@ import (
 	"github.com/agntcy/dir-runtime/store/crd"
 	"github.com/agntcy/dir-runtime/store/etcd"
 	"github.com/agntcy/dir-runtime/store/sql"
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
@@ -43,6 +44,10 @@ type Config struct {
 
 	// Storage holds the storage backend configuration.
 	Store store.Config `json:"store" mapstructure:"store"`
+
+	// OASFSchemaURLs are the OASF schema servers whose A2A card extensions are read
+	// when filtering workloads by agent. Defaults to runtimev1.DefaultOASFSchemaURL.
+	OASFSchemaURLs []string `json:"oasf_schema_urls,omitempty" mapstructure:"oasf_schema_urls"`
 }
 
 // Addr returns the server address string.
@@ -80,6 +85,7 @@ func LoadConfig() (*Config, error) {
 	//
 	v.SetDefault("host", DefaultServerHost)
 	v.SetDefault("port", DefaultServerPort)
+	v.SetDefault("oasf_schema_urls", []string{runtimev1.DefaultOASFSchemaURL})
 
 	//
 	// Store configuration

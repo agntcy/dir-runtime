@@ -39,12 +39,11 @@ func (s *Discovery) ListWorkloads(req *runtimev1.ListWorkloadsRequest, stream ru
 	ctx := stream.Context()
 
 	// Get all workloads from database
-	workloads, err := s.db.List(ctx, req.GetLabels())
+	workloads, err := s.db.List(ctx, req)
 	if err != nil {
 		return status.Errorf(codes.Internal, "failed to list workloads: %v", err)
 	}
 
-	// Apply label filters if provided
 	for _, workload := range workloads {
 		select {
 		case <-ctx.Done():
