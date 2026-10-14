@@ -52,7 +52,7 @@ func main() {
 	grpcServer := grpc.NewServer()
 
 	// Register runtime server
-	err = server.Register(grpcServer, store)
+	err = server.Register(grpcServer, store, server.WithAcceptedSchemaURLs(cfg.OASFSchemaURLs))
 	if err != nil {
 		logger.Error("failed to initialize runtime server internals", "error", err)
 		return

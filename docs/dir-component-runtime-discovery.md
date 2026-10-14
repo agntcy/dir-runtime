@@ -375,6 +375,7 @@ When a workload has the configured OASF resolver label, the resolver attempts to
 | `SERVER_STORE_CRD_KUBECONFIG` | Path to kubeconfig file (empty for in-cluster) | `` |
 | `SERVER_STORE_CRD_RESYNC_PERIOD` | How often to resync the cache from the API server | `30s` |
 | `SERVER_STORE_SQLITE_PATH` | SQLite database file shared with discovery (`~` expands to home) | `~/.agntcy/dir-runtime/workloads.db` |
+| `SERVER_OASF_SCHEMA_URLS` | Comma-separated OASF schema servers whose A2A card extensions are read when filtering by agent; `https`, or plain `http` on a loopback host (e.g. a local schema server) | `https://schema.oasf.outshift.com` |
 
 
 ## gRPC API
@@ -392,7 +393,27 @@ grpcurl -plaintext -d '{"id": "my-service"}' \
 
 ### ListWorkloads
 
-Stream all workloads with optional label filters. Labels support regex patterns.
+Stream workloads, optionally filtered. Filters of different kinds combine with AND; a filter with several values matches any of them.
+
+| Field | Matches |
+|-------|---------|
+| `labels` | Workload labels; values are regular expressions matched anywhere in the label value |
+| `runtimeTypes` | `runtime` (`docker`, `kubernetes`, `process`) |
+| `reachableFromWorkloadId` | Workloads sharing an isolation group with that workload, within the same runtime and discovery instance, excluding it |
+| `locatorProtocols` | A locator's `protocol` (`slim`, `grpc`, `http`, `tcp`, …) |
+| `names` | The agent's name: the A2A card's `name`, else the OASF record's |
+| `skills`, `domains` | The agent's OASF skills and domains |
+| `authors` | The DID of the human vouching for the agent (A2A card), else the OASF record's authors |
+| `schemaVersions` | The OASF schema version of the skills and domains |
+
+Names, skills, domains, authors and schema versions match as in Directory record search: exactly (case-insensitive), or with `*` and `?` wildcards, e.g. `natural_language_processing/*`.
+
+The agent filters read what the workload says about the agent it runs:
+
+- **A2A card** (`services.a2a`): the `discovery` extension (`skills`, `domains`, `schema_version`) and the `identity` extension (`human_did`) in `capabilities.extensions`, recognised by a `uri` of the form `<schema URL>[/<version>]/objects/discovery` (or `/objects/identity`) on a schema server listed in `SERVER_OASF_SCHEMA_URLS`. Extensions from other servers are ignored: dir-runtime doesn't validate the payload, so the list keeps workloads on one vocabulary.
+- **OASF record** (`services.oasf`), resolved from `org.agntcy/agent-record`, for whatever the card doesn't provide. A record the Directory doesn't know (for example one kept on a private node) is not an error: the workload is listed without it, and the resolver doesn't retry.
+
+When both are present, the card wins. Values are claims made by whoever deployed the workload; nothing is verified (see [#94](https://github.com/agntcy/dir-runtime/issues/94)).
 
 ```bash
 # List all workloads
@@ -401,5 +422,9 @@ grpcurl -plaintext -d '{}' \
 
 # Filter by labels (supports regex)
 grpcurl -plaintext -d '{"labels": {"org.agntcy/agent-type": "a2a"}}' \
+  localhost:8080 agntcy.dir.runtime.v1.DiscoveryService/ListWorkloads
+
+# Agents with a debugging skill reachable over SLIM
+grpcurl -plaintext -d '{"skills": ["software_engineering/code_debugging/*"], "locatorProtocols": ["slim"]}' \
   localhost:8080 agntcy.dir.runtime.v1.DiscoveryService/ListWorkloads
 ```

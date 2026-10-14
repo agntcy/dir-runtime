@@ -15,6 +15,8 @@ import (
 	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	signv1 "github.com/agntcy/dir/api/sign/v1"
 	"github.com/agntcy/dir/client"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const ResolverType types.WorkloadResolverType = "oasf"
@@ -93,13 +95,17 @@ func (r *resolver) Resolve(ctx context.Context, workload *runtimev1.Workload) (a
 	if recordCID == "" {
 		// Fetch the OASF record using the provided context
 		resolve, err := r.client.Resolve(ctx, name, version)
+		if isNotFound(err) {
+			return unresolved(workload, name+":"+version), nil
+		}
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch OASF record (%s:%s): %w", name, version, err)
 		}
 
 		// Get the first info
 		if len(resolve.GetRecords()) == 0 {
-			return nil, fmt.Errorf("no OASF info found for record (%s:%s)", name, version)
+			return unresolved(workload, name+":"+version), nil
 		}
 
 		// Use the first record's CID as the record CID to pull
@@ -108,6 +114,10 @@ func (r *resolver) Resolve(ctx context.Context, workload *runtimev1.Workload) (a
 
 	// Pull the full record data using the provided context
 	record, err := r.client.Pull(ctx, &corev1.RecordRef{Cid: recordCID})
+	if isNotFound(err) {
+		return unresolved(workload, recordCID), nil
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to pull OASF record %s: %w", recordCID, err)
 	}
@@ -180,4 +190,32 @@ func (r *resolver) extractRecordIDs(workload *runtimev1.Workload) (string, strin
 	}
 
 	return "", "", "", fmt.Errorf("invalid record FQDN format: %s", recordFQDN)
+}
+
+// isNotFound reports whether err says the record doesn't exist on the Directory the
+// resolver talks to, as opposed to a failure worth retrying.
+func isNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// A gRPC status decides by its code alone: a transient failure whose message happens
+	// to say "not found" must still be retried. Only other errors fall back to the text.
+	if st, ok := status.FromError(err); ok {
+		return st.Code() == codes.NotFound
+	}
+
+	return strings.Contains(strings.ToLower(err.Error()), "not found")
+}
+
+// unresolved is the result for a record reference the Directory doesn't know, for example
+// a record kept on a private node. It is not an error: the workload is listed without a
+// record, and the resolver doesn't retry.
+func unresolved(workload *runtimev1.Workload, ref string) map[string]any {
+	logger.Info("OASF record not found; listing the workload without it", "workload", workload.GetId(), "record", ref)
+
+	return map[string]any{
+		"ref":      ref,
+		"resolved": false,
+	}
 }
