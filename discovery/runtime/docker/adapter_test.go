@@ -4,6 +4,7 @@
 package docker
 
 import (
+	"net/netip"
 	"testing"
 
 	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
@@ -52,10 +53,33 @@ func TestInspectToWorkloadLocators(t *testing.T) {
 		},
 	}
 
-	workload := (&adapter{}).inspectToWorkload(inspect)
+	t.Run("network mode uses container name per network and private port", func(t *testing.T) {
+		workload := (&adapter{}).inspectToWorkload(inspect)
 
-	assert.Equal(t, []*runtimev1.WorkloadLocator{
-		tcp("tcp://agent.team-a:9999"),
-		tcp("tcp://agent.team-b:9999"),
-	}, workload.GetLocators())
+		assert.Equal(t, []*runtimev1.WorkloadLocator{
+			tcp("tcp://agent.team-a:9999"),
+			tcp("tcp://agent.team-b:9999"),
+		}, workload.GetLocators())
+	})
+
+	t.Run("host mode uses the host address and every bound public port", func(t *testing.T) {
+		hostMode := inspect
+		hostMode.NetworkSettings = &container.NetworkSettings{
+			Networks: map[string]*network.EndpointSettings{"team-a": {}},
+			Ports: network.PortMap{
+				network.MustParsePort("9999/tcp"): {{HostPort: "19999"}, {HostIP: netip.IPv6Unspecified(), HostPort: "29999"}},
+				network.MustParsePort("8081/tcp"): {{HostPort: "18081"}},
+				network.MustParsePort("7000/tcp"): nil,
+			},
+		}
+
+		workload := (&adapter{hostMode: true}).inspectToWorkload(hostMode)
+
+		assert.Equal(t, []*runtimev1.WorkloadLocator{
+			tcp("tcp://0.0.0.0:18081"),
+			tcp("tcp://0.0.0.0:19999"),
+			tcp("tcp://0.0.0.0:29999"),
+		}, workload.GetLocators())
+		assert.Equal(t, []string{"team-a"}, workload.GetIsolationGroups())
+	})
 }

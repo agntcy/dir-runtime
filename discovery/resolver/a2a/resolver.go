@@ -136,8 +136,9 @@ func (r *resolver) probeURL(ctx context.Context, url string) map[string]any {
 }
 
 // probeOrigins returns the HTTP(S) origins (scheme://host:port) to probe for a workload's locators.
-// A tcp locator's application protocol is unknown, so both http and https are tried;
-// http and https locators are probed with their own scheme; other protocols are skipped.
+// The locator's declared protocol decides, not its URL scheme: a tcp locator's application
+// protocol is unknown, so both http and https are tried; http and https locators are probed
+// with that scheme; other protocols (slim, grpc, …) are skipped even if their URL looks like HTTP.
 func probeOrigins(workload *runtimev1.Workload) []string {
 	var origins []string
 
@@ -149,11 +150,11 @@ func probeOrigins(workload *runtimev1.Workload) []string {
 
 		var schemes []string
 
-		switch strings.ToLower(u.Scheme) {
+		switch protocol := strings.ToLower(locator.GetProtocol()); protocol {
 		case types.LocatorProtocolTCP:
 			schemes = []string{"http", "https"}
 		case "http", "https":
-			schemes = []string{strings.ToLower(u.Scheme)}
+			schemes = []string{protocol}
 		}
 
 		for _, scheme := range schemes {

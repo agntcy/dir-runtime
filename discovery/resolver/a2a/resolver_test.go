@@ -304,3 +304,30 @@ func TestResolver_Apply(t *testing.T) {
 		}
 	})
 }
+
+func TestProbeOrigins_UsesTheLocatorProtocol(t *testing.T) {
+	workload := &runtimev1.Workload{Locators: []*runtimev1.WorkloadLocator{
+		{Protocol: "tcp", Url: "tcp://10.0.0.1:8080"},
+		{Protocol: "http", Url: "http://10.0.0.2:8081"},
+		{Protocol: "HTTPS", Url: "https://10.0.0.3:8443"},
+		{Protocol: "slim", Url: "http://10.0.0.4:8080"},
+		{Protocol: "grpc", Url: "http://10.0.0.5:50051"},
+	}}
+
+	got := probeOrigins(workload)
+	want := []string{
+		"http://10.0.0.1:8080", "https://10.0.0.1:8080",
+		"http://10.0.0.2:8081",
+		"https://10.0.0.3:8443",
+	}
+
+	if len(got) != len(want) {
+		t.Fatalf("probeOrigins() = %v, want %v", got, want)
+	}
+
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("probeOrigins() = %v, want %v", got, want)
+		}
+	}
+}
