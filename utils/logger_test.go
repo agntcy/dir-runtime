@@ -6,10 +6,12 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"log/slog"
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewLogger(t *testing.T) {
@@ -143,4 +145,99 @@ func TestSetDefaultLogger_KeepsGroupsInOrder(t *testing.T) {
 func TestSetDefaultLogger_IgnoresNil(t *testing.T) {
 	SetDefaultLogger(nil)
 	NewLogger("k", "t").Info("still logs")
+}
+
+func restoreDefaultLogger(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		SetDefaultLogger(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	})
+}
+
+func TestSetDefaultLogger_WithALoggerFromNewLoggerDoesNotRecurse(t *testing.T) {
+	var buf bytes.Buffer
+	SetDefaultLogger(slog.New(slog.NewTextHandler(&buf, nil)))
+	restoreDefaultLogger(t)
+
+	SetDefaultLogger(NewLogger("runtime", "daemon").Logger)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		NewLogger("store", "sql").Info("registered workload")
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("logging through a base made by NewLogger did not return")
+	}
+
+	if out := buf.String(); !strings.Contains(out, "kind=store") || !strings.Contains(out, "registered workload") {
+		t.Errorf("unexpected output %q", out)
+	}
+}
+
+// ownershipHandler overwrites the attribute slices it is given, as slog.Handler allows.
+type ownershipHandler struct {
+	slog.Handler
+}
+
+func (h ownershipHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	child := h.Handler.WithAttrs(attrs)
+	for i := range attrs {
+		attrs[i] = slog.String("clobbered", "yes")
+	}
+
+	return ownershipHandler{child}
+}
+
+func TestDeferredHandler_PassesEachReplayItsOwnAttrs(t *testing.T) {
+	var buf bytes.Buffer
+	SetDefaultLogger(slog.New(ownershipHandler{slog.NewTextHandler(&buf, nil)}))
+	restoreDefaultLogger(t)
+
+	logger := NewLogger("store", "sql")
+	logger.Info("first")
+	logger.Info("second")
+
+	out := buf.String()
+	if strings.Count(out, "kind=store") != 2 || strings.Contains(out, "clobbered") {
+		t.Errorf("attributes were not kept across logs: %q", out)
+	}
+}
+
+// attrLevelHandler enables Debug only for loggers carrying kind=debuggable.
+type attrLevelHandler struct {
+	slog.Handler
+	debug bool
+}
+
+func (h attrLevelHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return h.debug || level >= slog.LevelInfo
+}
+
+func (h attrLevelHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	debug := h.debug
+	for _, a := range attrs {
+		if a.Key == "kind" && a.Value.String() == "debuggable" {
+			debug = true
+		}
+	}
+
+	return attrLevelHandler{h.Handler.WithAttrs(attrs), debug}
+}
+
+func TestDeferredHandler_EnabledUsesTheDerivedHandler(t *testing.T) {
+	var buf bytes.Buffer
+	SetDefaultLogger(slog.New(attrLevelHandler{Handler: slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})}))
+	restoreDefaultLogger(t)
+
+	NewLogger("debuggable", "x").Debug("shown")
+	NewLogger("plain", "x").Debug("hidden")
+
+	out := buf.String()
+	if !strings.Contains(out, "shown") || strings.Contains(out, "hidden") {
+		t.Errorf("Enabled ignored the logger's attributes: %q", out)
+	}
 }

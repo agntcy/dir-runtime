@@ -7,6 +7,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"slices"
 	"sync/atomic"
 )
 
@@ -29,13 +30,18 @@ func init() {
 
 // SetDefaultLogger makes every dir-runtime logger write through l, including loggers
 // created before the call (package-level loggers are created at import time). Their
-// kind and type attributes are kept. A nil logger is ignored.
+// kind and type attributes are kept. A nil logger is ignored. A logger made by
+// NewLogger is resolved to the handler it writes to now, so it can't become its own base.
 func SetDefaultLogger(l *slog.Logger) {
 	if l == nil {
 		return
 	}
 
 	h := l.Handler()
+	if deferred, ok := h.(*deferredHandler); ok {
+		h = deferred.current()
+	}
+
 	baseHandler.Store(&h)
 }
 
@@ -68,15 +74,18 @@ func (h *deferredHandler) current() slog.Handler {
 		if op.group != "" {
 			base = base.WithGroup(op.group)
 		} else {
-			base = base.WithAttrs(op.attrs)
+			// WithAttrs owns the slice it is given, so each replay passes its own copy.
+			base = base.WithAttrs(slices.Clone(op.attrs))
 		}
 	}
 
 	return base
 }
 
+// Enabled asks the same derived handler Handle uses, since a handler's decision may
+// depend on the attributes and groups added to it.
 func (h *deferredHandler) Enabled(ctx context.Context, level slog.Level) bool {
-	return (*baseHandler.Load()).Enabled(ctx, level)
+	return h.current().Enabled(ctx, level)
 }
 
 //nolint:gocritic // slog.Handler requires the record by value.
