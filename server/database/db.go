@@ -67,6 +67,10 @@ func (d *Database) List(ctx context.Context, req *v1.ListWorkloadsRequest) ([]*v
 		return []*v1.Workload{}, fmt.Errorf("failed to list workloads: %w", err)
 	}
 
+	if req == nil {
+		req = &v1.ListWorkloadsRequest{}
+	}
+
 	opts := v1.FilterOptions{AcceptedSchemaURLs: d.acceptedSchemaURLs}
 
 	// The reference workload of a reachability filter is one of the listed workloads;

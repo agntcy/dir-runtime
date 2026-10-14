@@ -22,6 +22,8 @@ func TestValidateSchemaURL(t *testing.T) {
 		{"https://user@schema.example.com", true},
 		{"https://schema.example.com?x=1", true},
 		{"", true},
+		{"https://:443", true},
+		{"http://:8080", true},
 	}
 
 	for _, tt := range tests {

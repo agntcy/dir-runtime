@@ -367,3 +367,16 @@ func TestDatabase_ListByAgentAndRuntime(t *testing.T) {
 		t.Errorf("reachable from an unknown workload = %v, want none", got)
 	}
 }
+
+func TestDatabase_ListNilRequestMatchesEverything(t *testing.T) {
+	db := newTestDatabase([]*v1.Workload{{Id: "1"}, {Id: "2"}})
+
+	got, err := db.List(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("List(nil) error = %v", err)
+	}
+
+	if len(got) != 2 {
+		t.Fatalf("List(nil) returned %d workloads, want 2", len(got))
+	}
+}
