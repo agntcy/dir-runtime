@@ -247,18 +247,14 @@ func (s *store) WatchWorkloads(ctx context.Context, handler func(workload *runti
 func (s *store) workloadToCR(workload *runtimev1.Workload) (*unstructured.Unstructured, error) {
 	// Generate JSON representation
 	data, err := json.Marshal(&crdv1.DiscoveredWorkload{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: s.gvr.GroupVersion().String(),
-			Kind:       "DiscoveredWorkload",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      crName(workload.GetId()),
-			Namespace: s.namespace,
-			Labels: map[string]string{
-				"discovery.agntcy.io/id":      workload.GetId(),
-				"discovery.agntcy.io/runtime": workload.GetRuntime(),
-				"discovery.agntcy.io/type":    workload.GetType(),
-			},
+		APIVersion: s.gvr.GroupVersion().String(),
+		Kind:       "DiscoveredWorkload",
+		Name:       crName(workload.GetId()),
+		Namespace:  s.namespace,
+		Labels: map[string]string{
+			"discovery.agntcy.io/id":      workload.GetId(),
+			"discovery.agntcy.io/runtime": workload.GetRuntime(),
+			"discovery.agntcy.io/type":    workload.GetType(),
 		},
 		Spec: workload,
 	})

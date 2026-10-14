@@ -6,6 +6,7 @@ package process
 import (
 	"testing"
 
+	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,6 +30,10 @@ func TestParseDescriptor(t *testing.T) {
 		{name: "port zero", data: `{"name":"agent","pid":1,"ports":["0"]}`, wantErr: "invalid port"},
 		{name: "port too large", data: `{"name":"agent","pid":1,"ports":[70000]}`, wantErr: "invalid port"},
 		{name: "fractional port", data: `{"name":"agent","pid":1,"ports":[99.5]}`, wantErr: "invalid port"},
+		{name: "locators", data: `{"name":"agent","pid":1,"locators":[{"protocol":"slim","url":"slim://org/ns/agent"}]}`},
+		{name: "locator without protocol", data: `{"name":"agent","pid":1,"locators":[{"url":"slim://org/ns/agent"}]}`, wantErr: "locator 0: protocol is required"},
+		{name: "locator without url", data: `{"name":"agent","pid":1,"locators":[{"protocol":"slim"}]}`, wantErr: "locator 0: url is required"},
+		{name: "locator url without scheme", data: `{"name":"agent","pid":1,"locators":[{"protocol":"slim","url":"org/ns/agent"}]}`, wantErr: "locator 0: url must include a scheme"},
 	}
 
 	for _, test := range tests {
@@ -59,25 +64,30 @@ func TestDescriptorToWorkload(t *testing.T) {
 		assert.Equal(t, "my-host", workload.GetHostname())
 		assert.Equal(t, "process", workload.GetRuntime())
 		assert.Equal(t, "process", workload.GetType())
-		assert.Equal(t, []string{"127.0.0.1"}, workload.GetAddresses())
-		assert.Equal(t, []string{"9999"}, workload.GetPorts())
+		assert.Equal(t, []*runtimev1.WorkloadLocator{{Protocol: "tcp", Url: "tcp://127.0.0.1:9999"}}, workload.GetLocators())
 		assert.Equal(t, []string{"host"}, workload.GetIsolationGroups())
 		assert.NotNil(t, workload.GetLabels())
 		assert.NotNil(t, workload.GetAnnotations())
 	})
 
-	t.Run("locator-only workload has no ports", func(t *testing.T) {
+	t.Run("descriptor locators are copied", func(t *testing.T) {
 		desc, err := parseDescriptor([]byte(`{
 			"name": "agent",
 			"pid": 42,
-			"annotations": {"org.agntcy/locator": "slim://org/ns/agent"}
+			"locators": [{"protocol": "slim", "url": "slim://org/ns/agent"}]
 		}`))
 		require.NoError(t, err)
 
 		workload := desc.toWorkload("agent-1", "my-host")
 
-		assert.Empty(t, workload.GetPorts())
-		assert.Equal(t, "slim://org/ns/agent", workload.GetAnnotations()["org.agntcy/locator"])
+		assert.Equal(t, []*runtimev1.WorkloadLocator{{Protocol: "slim", Url: "slim://org/ns/agent"}}, workload.GetLocators())
+	})
+
+	t.Run("no ports and no locators means no locators", func(t *testing.T) {
+		desc, err := parseDescriptor([]byte(`{"name":"agent","pid":42,"addresses":["192.168.1.10"]}`))
+		require.NoError(t, err)
+
+		assert.Empty(t, desc.toWorkload("agent-1", "my-host").GetLocators())
 	})
 
 	t.Run("keeps descriptor values", func(t *testing.T) {
@@ -87,7 +97,8 @@ func TestDescriptorToWorkload(t *testing.T) {
 			"labels": {"org.agntcy/discover": "true", "org.agntcy/agent-type": "a2a"},
 			"annotations": {"org.agntcy/agent-record": "my-agent:v1.0.0"},
 			"addresses": ["192.168.1.10"],
-			"ports": ["9999", "8080"]
+			"ports": ["9999", "8080"],
+			"locators": [{"protocol": "slim", "url": "slim://org/ns/agent"}]
 		}`))
 		require.NoError(t, err)
 
@@ -95,7 +106,10 @@ func TestDescriptorToWorkload(t *testing.T) {
 
 		assert.Equal(t, map[string]string{"org.agntcy/discover": "true", "org.agntcy/agent-type": "a2a"}, workload.GetLabels())
 		assert.Equal(t, map[string]string{"org.agntcy/agent-record": "my-agent:v1.0.0"}, workload.GetAnnotations())
-		assert.Equal(t, []string{"192.168.1.10"}, workload.GetAddresses())
-		assert.Equal(t, []string{"9999", "8080"}, workload.GetPorts())
+		assert.Equal(t, []*runtimev1.WorkloadLocator{
+			{Protocol: "slim", Url: "slim://org/ns/agent"},
+			{Protocol: "tcp", Url: "tcp://192.168.1.10:8080"},
+			{Protocol: "tcp", Url: "tcp://192.168.1.10:9999"},
+		}, workload.GetLocators())
 	})
 }

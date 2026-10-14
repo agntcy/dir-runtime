@@ -211,9 +211,8 @@ func (d *adapter) containerToWorkload(c container.Summary) *runtimev1.Workload {
 		Hostname:        name,
 		Runtime:         runtimev1.RuntimeType_RUNTIME_TYPE_DOCKER.GetName(),
 		Type:            runtimev1.WorkloadType_WORKLOAD_TYPE_CONTAINER.GetName(),
-		Addresses:       keysToSlice(addresses),
+		Locators:        types.TCPLocators(keysToSlice(addresses), keysToSlice(ports)),
 		IsolationGroups: keysToSlice(isolationGroups),
-		Ports:           keysToSlice(ports),
 		Labels:          c.Labels,
 		Annotations:     make(map[string]string),
 	}
@@ -277,9 +276,8 @@ func (d *adapter) inspectToWorkload(inspect container.InspectResponse) *runtimev
 		Hostname:        hostname,
 		Runtime:         runtimev1.RuntimeType_RUNTIME_TYPE_DOCKER.GetName(),
 		Type:            runtimev1.WorkloadType_WORKLOAD_TYPE_CONTAINER.GetName(),
-		Addresses:       keysToSlice(addresses),
+		Locators:        types.TCPLocators(keysToSlice(addresses), keysToSlice(ports)),
 		IsolationGroups: keysToSlice(isolationGroups),
-		Ports:           keysToSlice(ports),
 		Labels:          labels,
 		Annotations:     make(map[string]string),
 	}

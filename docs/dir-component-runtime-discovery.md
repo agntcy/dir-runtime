@@ -174,16 +174,17 @@ One file per process at `<dir>/<id>.json`; the file name without `.json` is the 
 |-------|----------|-------------|
 | `name` | yes | Workload name |
 | `pid` | yes | Process ID; the workload is listed only while this process is alive |
-| `ports` | no | Ports the process listens on (strings or numbers); the A2A resolver only probes workloads with ports |
+| `locators` | no | Endpoints the process can be reached at, each `{"protocol": ..., "url": ...}` with a full URL, e.g. `{"protocol": "slim", "url": "slim://org/namespace/agent"}` |
+| `ports` | no | Ports the process listens on (strings or numbers); turned into `tcp://<address>:<port>` locators |
+| `addresses` | no | Addresses for `ports`; defaults to `["127.0.0.1"]` |
 | `labels` | no | Must include `org.agntcy/discover=true`; resolver labels work as for containers |
-| `annotations` | no | E.g. `org.agntcy/agent-record`, `org.agntcy/locator` |
-| `addresses` | no | Defaults to `["127.0.0.1"]` |
+| `annotations` | no | E.g. `org.agntcy/agent-record` |
 
 Discovery sets `runtime` and `type` to `process`, `hostname` to the host name, and `isolationGroups` to `["host"]`.
 
 #### Locators
 
-An agent that is not reachable over an HTTP address and port (for example one served over SLIM) can omit `ports` and publish its protocol endpoint in the `org.agntcy/locator` annotation, e.g. `"org.agntcy/locator": "slim://org/namespace/agent"`. Discovery passes annotations through unchanged; the A2A resolver skips workloads without ports, while the OASF resolver still resolves `org.agntcy/agent-record`.
+Every workload lists the endpoints it can be reached at in `locators`, each with a protocol and a full URL. For a process, they come from the descriptor's `locators`, plus one `tcp` locator per address and port. An agent that is not reachable over an address and port (for example one served over SLIM) only lists its locator. The A2A resolver probes `tcp`, `http` and `https` locators for an agent card and skips other protocols, while the OASF resolver still resolves `org.agntcy/agent-record`.
 
 #### Trust
 
@@ -227,7 +228,7 @@ kill $AGENT_PID
 
 To resolve OASF records from a local Directory (`dirctl daemon start`), drop `DISCOVERY_RESOLVER_OASF_ENABLED=false`, set `DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888` and `DIRECTORY_CLIENT_AUTH_MODE=insecure`, and add `"org.agntcy/agent-record": "<cid or name:version>"` to the descriptor's labels or annotations.
 
-The server is bound to `127.0.0.1` here because it has no authentication: with the default `SERVER_HOST=0.0.0.0` anyone who can reach the machine can list its workloads. To share workloads with other machines, put transport security and access control in front of the server, and list addresses or locators in the descriptors that those machines can reach (the `127.0.0.1` default is only reachable locally).
+The server is bound to `127.0.0.1` here because it has no authentication: with the default `SERVER_HOST=0.0.0.0` anyone who can reach the machine can list its workloads. To share workloads with other machines, put transport security and access control in front of the server, and list locators (or addresses and ports) in the descriptors that those machines can reach (the `127.0.0.1` default is only reachable locally).
 
 The walkthrough uses SQLite so no extra service is needed; etcd works the same way by running etcd and setting `DISCOVERY_STORE_TYPE=etcd` and `SERVER_STORE_TYPE=etcd`.
 
@@ -283,12 +284,9 @@ Discovered workloads have a `services` field that holds metadata extracted by re
     "org.agntcy/agent-type": "a2a",
     "org.agntcy/agent-record": "my-agent:1.0.0"
   },
-  "addresses": [
-    "10-244-0-9.team-a.pod"
-  ],
-  "ports": [
-    "8080",
-    "9999"
+  "locators": [
+    {"protocol": "tcp", "url": "tcp://10-244-0-9.team-a.pod:8080"},
+    {"protocol": "tcp", "url": "tcp://10-244-0-9.team-a.pod:9999"}
   ],
   "isolationGroups": [
     "team-a"
