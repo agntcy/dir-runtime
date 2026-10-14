@@ -157,6 +157,8 @@ func TestIsNotFound(t *testing.T) {
 		{"wrapped grpc NotFound", fmt.Errorf("pull: %w", status.Error(codes.NotFound, "x")), true},
 		{"not found message", errors.New("record bafy... not found"), true},
 		{"unavailable", status.Error(codes.Unavailable, "connection refused"), false},
+		{"unavailable saying not found", status.Error(codes.Unavailable, "upstream not found"), false},
+		{"wrapped unavailable saying not found", fmt.Errorf("pull: %w", status.Error(codes.Unavailable, "route not found")), false},
 		{"other error", errors.New("timeout"), false},
 	}
 

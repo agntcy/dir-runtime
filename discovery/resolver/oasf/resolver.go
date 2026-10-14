@@ -199,8 +199,10 @@ func isNotFound(err error) bool {
 		return false
 	}
 
-	if st, ok := status.FromError(err); ok && st.Code() == codes.NotFound {
-		return true
+	// A gRPC status decides by its code alone: a transient failure whose message happens
+	// to say "not found" must still be retried. Only other errors fall back to the text.
+	if st, ok := status.FromError(err); ok {
+		return st.Code() == codes.NotFound
 	}
 
 	return strings.Contains(strings.ToLower(err.Error()), "not found")

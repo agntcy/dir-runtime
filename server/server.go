@@ -49,7 +49,7 @@ func ValidateSchemaURL(u string) error {
 		return fmt.Errorf("invalid OASF schema URL %q: %w", u, err)
 	}
 
-	if parsed.Host == "" || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.User != nil {
+	if parsed.Hostname() == "" || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.User != nil {
 		return fmt.Errorf("invalid OASF schema URL %q: want scheme://host[:port][/path]", u)
 	}
 
