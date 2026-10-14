@@ -4,8 +4,10 @@
 package utils
 
 import (
+	"context"
 	"log/slog"
 	"os"
+	"sync/atomic"
 )
 
 // Logger wraps slog.Logger with predefined attributes.
@@ -13,18 +15,93 @@ type Logger struct {
 	*slog.Logger
 }
 
-var defaultLogger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-	Level: slog.LevelInfo,
-}))
+// baseHandler is where every logger created by NewLogger writes. It defaults to JSON
+// on stdout and can be replaced with SetDefaultLogger, e.g. by a program that embeds
+// dir-runtime (such as dirctl daemon) so that all its logs share one format.
+var baseHandler atomic.Pointer[slog.Handler]
+
+func init() {
+	var h slog.Handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})
+	baseHandler.Store(&h)
+}
+
+// SetDefaultLogger makes every dir-runtime logger write through l, including loggers
+// created before the call (package-level loggers are created at import time). Their
+// kind and type attributes are kept. A nil logger is ignored.
+func SetDefaultLogger(l *slog.Logger) {
+	if l == nil {
+		return
+	}
+
+	h := l.Handler()
+	baseHandler.Store(&h)
+}
 
 // NewLogger creates a logger with kind and type attributes for the component.
 func NewLogger(kind, componentType string) *Logger {
 	return &Logger{
-		Logger: defaultLogger.With(
+		Logger: slog.New(&deferredHandler{}).With(
 			slog.String("kind", kind),
 			slog.String("type", componentType),
 		),
 	}
+}
+
+// deferredHandler applies its attributes and groups to the current base handler each
+// time it handles a record, so a logger created early follows a later SetDefaultLogger.
+type deferredHandler struct {
+	ops []handlerOp
+}
+
+// handlerOp is one WithAttrs or WithGroup call, replayed in order on the base handler.
+type handlerOp struct {
+	attrs []slog.Attr
+	group string
+}
+
+func (h *deferredHandler) current() slog.Handler {
+	base := *baseHandler.Load()
+
+	for _, op := range h.ops {
+		if op.group != "" {
+			base = base.WithGroup(op.group)
+		} else {
+			base = base.WithAttrs(op.attrs)
+		}
+	}
+
+	return base
+}
+
+func (h *deferredHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return (*baseHandler.Load()).Enabled(ctx, level)
+}
+
+//nolint:gocritic // slog.Handler requires the record by value.
+func (h *deferredHandler) Handle(ctx context.Context, record slog.Record) error {
+	//nolint:wrapcheck // the base handler's error is the caller's error.
+	return h.current().Handle(ctx, record)
+}
+
+func (h *deferredHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return h.with(handlerOp{attrs: attrs})
+}
+
+func (h *deferredHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
+
+	return h.with(handlerOp{group: name})
+}
+
+func (h *deferredHandler) with(op handlerOp) *deferredHandler {
+	ops := make([]handlerOp, len(h.ops), len(h.ops)+1)
+	copy(ops, h.ops)
+
+	return &deferredHandler{ops: append(ops, op)}
 }
 
 // Info logs an info message.

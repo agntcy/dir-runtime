@@ -67,7 +67,16 @@ func WithStore(store storetypes.Store) Option {
 	}
 }
 
-// WithLogger sets the logger used by server.
+// SetDefaultLogger makes the logs of every dir-runtime package (stores, runtime
+// adapters, resolvers) go through l instead of JSON on stdout, keeping their kind and
+// type attributes. A program embedding discovery calls it once; unlike WithLogger it
+// is process-wide, since several discovery instances share those packages.
+func SetDefaultLogger(l *slog.Logger) {
+	utils.SetDefaultLogger(l)
+}
+
+// WithLogger sets the logger used by this discovery instance's own messages. Logs
+// from the packages it uses follow SetDefaultLogger.
 func WithLogger(logger *slog.Logger) Option {
 	return func(o *options) error {
 		if logger == nil {
