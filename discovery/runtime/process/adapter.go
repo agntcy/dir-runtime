@@ -193,17 +193,20 @@ func (a *adapter) scan(prev map[string]entry) (map[string]entry, error) {
 			continue
 		}
 
-		delete(a.invalid, path)
-
 		if desc.Labels[a.labelKey] != a.labelValue {
+			delete(a.invalid, path)
+
 			continue
 		}
 
 		if !isRunning(desc.PID, desc.StartedAt) {
-			a.removeStale(path, desc.PID)
+			// Keep a failed removal in a.invalid, so it is logged once per file version.
+			a.removeStale(path, desc.file, desc.PID)
 
 			continue
 		}
+
+		delete(a.invalid, path)
 
 		current[id] = entry{workload: desc.toWorkload(id, a.hostname), pid: desc.PID, startedAt: desc.StartedAt}
 	}
@@ -257,15 +260,29 @@ func readDescriptorFile(path string) (*descriptor, error) {
 		return nil, fmt.Errorf("file exceeds %d bytes", maxDescriptorSize)
 	}
 
-	return parseDescriptor(data)
+	desc, err := parseDescriptor(data)
+	if err != nil {
+		return nil, err
+	}
+
+	desc.file = info
+
+	return desc, nil
 }
 
-// logInvalid logs an invalid descriptor once per file version.
-// The caller must hold a.mu.
 // removeStale deletes the descriptor of a process that is gone, unless the adapter keeps
 // stale descriptors. Only descriptors the adapter would list reach here.
-func (a *adapter) removeStale(path string, pid int) {
-	if a.keepStale {
+//
+// It removes only the file it read: writers replace descriptors atomically (a new file
+// renamed into place), so a replacement written since the scan is a different file and
+// is left alone. The window between this check and the unlink remains.
+func (a *adapter) removeStale(path string, readInfo os.FileInfo, pid int) {
+	if a.keepStale || readInfo == nil {
+		return
+	}
+
+	current, err := os.Lstat(path)
+	if err != nil || !os.SameFile(readInfo, current) || !current.ModTime().Equal(readInfo.ModTime()) {
 		return
 	}
 
@@ -278,6 +295,8 @@ func (a *adapter) removeStale(path string, pid int) {
 	logger.Info("removed stale workload descriptor", "file", path, "pid", pid)
 }
 
+// logInvalid logs an invalid descriptor once per file version.
+// The caller must hold a.mu.
 func (a *adapter) logInvalid(path string, err error) {
 	var state fileState
 	if info, statErr := os.Stat(path); statErr == nil {

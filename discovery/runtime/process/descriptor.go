@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -40,6 +41,9 @@ type descriptor struct {
 	// StartedAt is when the descriptor was written. A process holding the PID that started
 	// later is not the one the descriptor describes: its PID was reused.
 	StartedAt *time.Time `json:"started_at,omitempty"`
+
+	// file is the descriptor file as it was read, to tell it from a later replacement.
+	file os.FileInfo
 }
 
 // locator is an endpoint the process can be reached at, e.g. a SLIM name.

@@ -337,6 +337,41 @@ func TestListWorkloadsDetectsReusedPID(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(dir, "reused.json"), "a descriptor older than its PID's process is stale")
 }
 
+func TestRemoveStaleLeavesAReplacedDescriptor(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	writeDescriptor(t, dir, "agent", deadPID(t), discoverable())
+
+	read, err := readDescriptorFile(filepath.Join(dir, "agent.json"))
+	require.NoError(t, err)
+
+	// A writer replaces the descriptor atomically after the scan read it.
+	tmp := filepath.Join(dir, ".agent.json.tmp")
+	require.NoError(t, os.WriteFile(tmp, []byte(`{"name":"agent","pid":1}`), 0o600))
+	require.NoError(t, os.Rename(tmp, filepath.Join(dir, "agent.json")))
+
+	a.removeStale(filepath.Join(dir, "agent.json"), read.file, 1)
+	assert.FileExists(t, filepath.Join(dir, "agent.json"), "the replacement is not the file that was read")
+}
+
+func TestFailedStaleRemovalIsRememberedAsInvalid(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can remove files from a read-only directory")
+	}
+
+	a, dir := newTestAdapter(t)
+	writeDescriptor(t, dir, "gone", deadPID(t), discoverable())
+	require.NoError(t, os.Chmod(dir, 0o500))
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	require.Empty(t, listIDs(t, a))
+	assert.FileExists(t, filepath.Join(dir, "gone.json"))
+
+	a.mu.Lock()
+	_, remembered := a.invalid[filepath.Join(dir, "gone.json")]
+	a.mu.Unlock()
+	assert.True(t, remembered, "a failed removal is logged once per file version, not every poll")
+}
+
 func TestIsRunningWithoutStartedAt(t *testing.T) {
 	assert.True(t, isRunning(os.Getpid(), nil))
 	assert.False(t, isRunning(deadPID(t), nil))
