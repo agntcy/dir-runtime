@@ -26,20 +26,20 @@ func processStartTime(pid int) (time.Time, bool) {
 	}
 
 	// The command name (field 2) can contain spaces; fields after it follow the last ')'.
-	end := bytes.LastIndexByte(stat, ')')
-	if end < 0 {
+	_, rest, ok := bytes.CutLast(stat, []byte(")"))
+	if !ok {
 		return time.Time{}, false
 	}
 
-	fields := strings.Fields(string(stat[end+1:]))
+	fields := strings.Fields(string(rest))
 	// starttime is field 22; fields[0] here is field 3 (state).
 	const startTimeIndex = 22 - 3
 	if len(fields) <= startTimeIndex {
 		return time.Time{}, false
 	}
 
-	ticks, err := strconv.ParseUint(fields[startTimeIndex], 10, 64)
-	if err != nil {
+	ticks, err := strconv.ParseInt(fields[startTimeIndex], 10, 64)
+	if err != nil || ticks < 0 {
 		return time.Time{}, false
 	}
 
@@ -57,7 +57,7 @@ func bootTime() (time.Time, bool) {
 		return time.Time{}, false
 	}
 
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		if rest, ok := strings.CutPrefix(line, "btime "); ok {
 			secs, err := strconv.ParseInt(strings.TrimSpace(rest), 10, 64)
 			if err != nil {
