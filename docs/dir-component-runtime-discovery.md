@@ -174,6 +174,7 @@ One file per process at `<dir>/<id>.json`; the file name without `.json` is the 
 |-------|----------|-------------|
 | `name` | yes | Workload name |
 | `pid` | yes | Process ID; the workload is listed only while this process is alive |
+| `started_at` | no | When the descriptor was written (RFC 3339). A process holding `pid` that started later is a different process that reused the PID, so the descriptor is treated as stale. Checked on Linux and macOS; elsewhere only `pid` is checked |
 | `locators` | no | Endpoints the process can be reached at, each `{"protocol": ..., "url": ...}` with a full URL, e.g. `{"protocol": "slim", "url": "slim://org/namespace/agent"}` |
 | `ports` | no | Ports the process listens on (strings or numbers); turned into `tcp://<address>:<port>` locators |
 | `addresses` | no | Addresses for `ports`; defaults to `["127.0.0.1"]` |
@@ -190,7 +191,7 @@ Every workload lists the endpoints it can be reached at in `locators`, each with
 
 A descriptor is an unauthenticated claim: discovery checks that the PID is alive, not that the process is the agent its descriptor or record names. Anyone who can write to the directory can register a workload, so keep it private to the user (discovery creates it with mode `0700`). Consumers that need to know an instance is genuine must verify it themselves, e.g. by probing the agent and checking a reply signed with the key its record names (see [#94](https://github.com/agntcy/dir-runtime/issues/94)).
 
-Write descriptors atomically (write a dotfile or `<id>.json.tmp`, then rename it to `<id>.json`) and delete them on clean shutdown. Discovery never modifies or removes descriptor files.
+Write descriptors atomically (write a dotfile or `<id>.json.tmp`, then rename it to `<id>.json`) and delete them on clean shutdown. A process that is killed can't, so discovery removes the descriptor of a discoverable workload once its process is gone (or its PID was reused, see `started_at`), and logs it. Descriptors without the discovery label are never touched. Set `DISCOVERY_RUNTIME_PROCESS_KEEP_STALE=true` to leave stale descriptors in place, e.g. when discovery may only read the directory.
 
 #### Run Locally
 
@@ -341,6 +342,7 @@ Discovered workloads have a `services` field that holds metadata extracted by re
 | `DISCOVERY_RUNTIME_PROCESS_POLL_INTERVAL` | How often to rescan the descriptor directory | `2s` |
 | `DISCOVERY_RUNTIME_PROCESS_LABEL_KEY` | Label key to filter process descriptors | `org.agntcy/discover` |
 | `DISCOVERY_RUNTIME_PROCESS_LABEL_VALUE` | Label value to filter process descriptors | `true` |
+| `DISCOVERY_RUNTIME_PROCESS_KEEP_STALE` | Leave descriptors of processes that are gone in place instead of removing them | `false` |
 | `DISCOVERY_RESOLVER_A2A_ENABLED` | Enable A2A resolver | `true` |
 | `DISCOVERY_RESOLVER_A2A_TIMEOUT` | Timeout for A2A discovery | `5s` |
 | `DISCOVERY_RESOLVER_A2A_PATHS` | Comma-separated list of paths to probe for A2A discovery | `/.well-known/agent-card.json,/.well-known/card.json` |
