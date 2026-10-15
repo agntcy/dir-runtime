@@ -31,10 +31,36 @@ const (
 
 var logger = utils.NewLogger("runtime", "process")
 
-// entry is a discovered workload together with the PID it was discovered for.
+// entry is a discovered workload together with the process it was discovered for.
 type entry struct {
-	workload *runtimev1.Workload
-	pid      int
+	workload  *runtimev1.Workload
+	pid       int
+	startedAt *time.Time
+}
+
+// startSlack allows for the clock granularity between a process starting and writing its
+// descriptor's started_at.
+const startSlack = time.Second
+
+// isRunning reports whether the process a descriptor describes is still running: its PID
+// exists and, when the descriptor says when it was written, the process holding the PID
+// started no later than that (otherwise the PID was reused). Where the start time can't
+// be read, the PID check alone applies.
+func isRunning(pid int, startedAt *time.Time) bool {
+	if !isAlive(pid) {
+		return false
+	}
+
+	if startedAt == nil {
+		return true
+	}
+
+	started, ok := processStartTime(pid)
+	if !ok {
+		return true
+	}
+
+	return !started.After(startedAt.Add(startSlack))
 }
 
 // fileState identifies a descriptor file version, used to log invalid files only once per change.
@@ -49,6 +75,7 @@ type adapter struct {
 	pollInterval time.Duration
 	labelKey     string
 	labelValue   string
+	keepStale    bool
 	hostname     string
 
 	mu      sync.Mutex
@@ -95,6 +122,7 @@ func NewAdapter(cfg Config) (types.RuntimeAdapter, error) {
 		pollInterval: cfg.PollInterval,
 		labelKey:     cfg.LabelKey,
 		labelValue:   cfg.LabelValue,
+		keepStale:    cfg.KeepStale,
 		hostname:     hostname,
 		known:        make(map[string]entry),
 		invalid:      make(map[string]fileState),
@@ -158,20 +186,29 @@ func (a *adapter) scan(prev map[string]entry) (map[string]entry, error) {
 		if err != nil {
 			a.logInvalid(path, err)
 
-			if previous, ok := prev[id]; ok && isAlive(previous.pid) {
+			if previous, ok := prev[id]; ok && isRunning(previous.pid, previous.startedAt) {
 				current[id] = previous
 			}
 
 			continue
 		}
 
-		delete(a.invalid, path)
+		if desc.Labels[a.labelKey] != a.labelValue {
+			delete(a.invalid, path)
 
-		if desc.Labels[a.labelKey] != a.labelValue || !isAlive(desc.PID) {
 			continue
 		}
 
-		current[id] = entry{workload: desc.toWorkload(id, a.hostname), pid: desc.PID}
+		if !isRunning(desc.PID, desc.StartedAt) {
+			// Keep a failed removal in a.invalid, so it is logged once per file version.
+			a.removeStale(path, desc.file, desc.PID)
+
+			continue
+		}
+
+		delete(a.invalid, path)
+
+		current[id] = entry{workload: desc.toWorkload(id, a.hostname), pid: desc.PID, startedAt: desc.StartedAt}
 	}
 
 	// Forget invalid files that no longer exist
@@ -223,7 +260,39 @@ func readDescriptorFile(path string) (*descriptor, error) {
 		return nil, fmt.Errorf("file exceeds %d bytes", maxDescriptorSize)
 	}
 
-	return parseDescriptor(data)
+	desc, err := parseDescriptor(data)
+	if err != nil {
+		return nil, err
+	}
+
+	desc.file = info
+
+	return desc, nil
+}
+
+// removeStale deletes the descriptor of a process that is gone, unless the adapter keeps
+// stale descriptors. Only descriptors the adapter would list reach here.
+//
+// It removes only the file it read: writers replace descriptors atomically (a new file
+// renamed into place), so a replacement written since the scan is a different file and
+// is left alone. The window between this check and the unlink remains.
+func (a *adapter) removeStale(path string, readInfo os.FileInfo, pid int) {
+	if a.keepStale || readInfo == nil {
+		return
+	}
+
+	current, err := os.Lstat(path)
+	if err != nil || !os.SameFile(readInfo, current) || !current.ModTime().Equal(readInfo.ModTime()) {
+		return
+	}
+
+	if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		a.logInvalid(path, fmt.Errorf("process %d is gone, but its descriptor can't be removed: %w", pid, err))
+
+		return
+	}
+
+	logger.Info("removed stale workload descriptor", "file", path, "pid", pid)
 }
 
 // logInvalid logs an invalid descriptor once per file version.

@@ -150,6 +150,7 @@ func LoadConfig() (*Config, error) {
 	v.SetDefault("runtime.process.poll_interval", process.DefaultPollInterval)
 	v.SetDefault("runtime.process.label_key", process.DefaultLabelKey)
 	v.SetDefault("runtime.process.label_value", process.DefaultLabelValue)
+	v.SetDefault("runtime.process.keep_stale", false)
 
 	//
 	// Resolver configuration
