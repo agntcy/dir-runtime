@@ -288,7 +288,72 @@ func TestWatchEventsProcessExit(t *testing.T) {
 	event := nextEvent(t, events)
 	assert.Equal(t, types.RuntimeEventTypeDeleted, event.Type)
 	assert.Equal(t, "agent", event.Workload.GetId())
-	assert.FileExists(t, filepath.Join(dir, "agent.json"), "adapter must not delete descriptors")
+	assert.NoFileExists(t, filepath.Join(dir, "agent.json"), "a gone process's descriptor is removed")
+}
+
+func TestListWorkloadsKeepStale(t *testing.T) {
+	dir := t.TempDir()
+	runtimeAdapter, err := NewAdapter(Config{
+		Dir:          dir,
+		PollInterval: time.Hour,
+		LabelKey:     DefaultLabelKey,
+		LabelValue:   DefaultLabelValue,
+		KeepStale:    true,
+	})
+	require.NoError(t, err)
+
+	a, ok := runtimeAdapter.(*adapter)
+	require.True(t, ok)
+
+	writeDescriptor(t, dir, "gone", deadPID(t), discoverable())
+
+	require.Empty(t, listIDs(t, a))
+	assert.FileExists(t, filepath.Join(dir, "gone.json"))
+}
+
+func TestListWorkloadsRemovesStaleDescriptors(t *testing.T) {
+	a, dir := newTestAdapter(t)
+	writeDescriptor(t, dir, "gone", deadPID(t), discoverable())
+	writeDescriptor(t, dir, "other", deadPID(t), map[string]string{"app": "x"})
+
+	require.Empty(t, listIDs(t, a))
+	assert.NoFileExists(t, filepath.Join(dir, "gone.json"))
+	assert.FileExists(t, filepath.Join(dir, "other.json"), "descriptors the adapter doesn't list are left alone")
+}
+
+func TestListWorkloadsDetectsReusedPID(t *testing.T) {
+	if _, ok := processStartTime(os.Getpid()); !ok {
+		t.Skip("process start time not available on this platform")
+	}
+
+	a, dir := newTestAdapter(t)
+	before := time.Now().Add(-time.Hour)
+	now := time.Now()
+
+	writeDescriptorStartedAt(t, dir, "reused", os.Getpid(), before)
+	writeDescriptorStartedAt(t, dir, "current", os.Getpid(), now)
+
+	require.Equal(t, []string{"current"}, listIDs(t, a))
+	assert.NoFileExists(t, filepath.Join(dir, "reused.json"), "a descriptor older than its PID's process is stale")
+}
+
+func TestIsRunningWithoutStartedAt(t *testing.T) {
+	assert.True(t, isRunning(os.Getpid(), nil))
+	assert.False(t, isRunning(deadPID(t), nil))
+}
+
+func writeDescriptorStartedAt(t *testing.T, dir, id string, pid int, startedAt time.Time) {
+	t.Helper()
+
+	data, err := json.Marshal(map[string]any{
+		"name":       id,
+		"pid":        pid,
+		"labels":     discoverable(),
+		"ports":      []string{"9999"},
+		"started_at": startedAt.Format(time.RFC3339Nano),
+	})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, id+".json"), data, 0o600))
 }
 
 func TestWatchEventsLabelRemoved(t *testing.T) {

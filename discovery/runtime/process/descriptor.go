@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/agntcy/dir-runtime/discovery/types"
 	runtimev1 "github.com/agntcy/dir/api/runtime/v1"
@@ -36,6 +37,9 @@ type descriptor struct {
 	Addresses   []string          `json:"addresses"`
 	Ports       []json.Number     `json:"ports"`
 	Locators    []locator         `json:"locators"`
+	// StartedAt is when the descriptor was written. A process holding the PID that started
+	// later is not the one the descriptor describes: its PID was reused.
+	StartedAt *time.Time `json:"started_at,omitempty"`
 }
 
 // locator is an endpoint the process can be reached at, e.g. a SLIM name.
