@@ -48,7 +48,10 @@ func processStartTime(pid int) (time.Time, bool) {
 		return time.Time{}, false
 	}
 
-	return boot.Add(time.Duration(ticks) * time.Second / clockTicks), true
+	// Divide before multiplying: ticks * time.Second overflows a Duration after ~1,068 days.
+	secs, frac := ticks/clockTicks, ticks%clockTicks
+
+	return boot.Add(time.Duration(secs)*time.Second + time.Duration(frac)*(time.Second/clockTicks)), true
 }
 
 func bootTime() (time.Time, bool) {
