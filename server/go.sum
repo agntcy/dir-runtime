@@ -1,5 +1,5 @@
-github.com/agntcy/dir/api v1.7.2-0.20261013134305-9252429b1042 h1:/fUP0jT9Wu8F8GH5jVBw3VYPVgF+L8C2iEE2RmGXhoQ=
-github.com/agntcy/dir/api v1.7.2-0.20261013134305-9252429b1042/go.mod h1:rT/3s/teH3nJJn4nbkJa7/fkjlPQCZCc3/oLDRf6bEE=
+github.com/agntcy/dir/api v1.8.0 h1:Fssy+HnVXNUAeVhfFxju4J1GL8D0X7jQJPbhBp14FaY=
+github.com/agntcy/dir/api v1.8.0/go.mod h1:cEuh7kr1sZq1M8m+VgZKmbC/eir9XRBXRv1dZcz665E=
 github.com/coreos/go-semver v0.3.1 h1:yi21YpKnrx1gt5R+la8n5WgS0kCrsPp33dmEyHReZr4=
 github.com/coreos/go-semver v0.3.1/go.mod h1:irMmmIw/7yzSRPWryHsK7EYSg09caPQL03VsM8rvUec=
 github.com/coreos/go-systemd/v22 v22.7.0 h1:LAEzFkke61DFROc7zNLX/WA2i5J8gYqe0rSj9KI28KA=
