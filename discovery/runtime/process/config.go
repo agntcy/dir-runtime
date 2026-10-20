@@ -32,4 +32,8 @@ type Config struct {
 
 	// LabelValue is the label value to filter process workloads.
 	LabelValue string `json:"label_value,omitempty" mapstructure:"label_value"`
+
+	// KeepStale leaves descriptors of processes that are gone in place instead of deleting
+	// them, for a directory the adapter may only read.
+	KeepStale bool `json:"keep_stale,omitempty" mapstructure:"keep_stale"`
 }
