@@ -189,10 +189,18 @@ jobs:
           use_oidc: true
 
   push:
-    name: Push Images
+    name: Push Image
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     needs: test
     runs-on: ubuntu-latest
+    strategy:
+      # One job per image: the metadata action emits a single bake target whose
+      # tags every inheriting target would push to, so each image needs its own
+      # metadata with only its own repository.
+      matrix:
+        target:
+          - dir-runtime-discovery
+          - dir-runtime-server
     steps:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -215,8 +223,7 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: |
-            ghcr.io/agntcy/dir-runtime-discovery
-            ghcr.io/agntcy/dir-runtime-server
+            ghcr.io/agntcy/${{ matrix.target }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -230,11 +237,12 @@ jobs:
           files: |
             ./docker-bake.hcl
             cwd://${{ steps.metadata.outputs.bake-file }}
+          targets: ${{ matrix.target }}
           set: |
             *.platform=linux/amd64,linux/arm64
             *.output=type=registry
-            *.cache-to=type=gha,mode=max
-            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max,scope=${{ matrix.target }}
+            *.cache-from=type=gha,scope=${{ matrix.target }}
         env:
           IMAGE_REPO: ghcr.io/agntcy
           IMAGE_TAG: ${{ github.ref_name }}
