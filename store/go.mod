@@ -7,7 +7,7 @@ replace github.com/agntcy/dir-runtime/utils => ../utils
 
 require (
 	github.com/agntcy/dir-runtime/utils v1.5.0
-	github.com/agntcy/dir/api v1.8.0
+	github.com/agntcy/dir/api v1.8.1-0.20261021112204-22ad1916f6e2
 	github.com/glebarez/sqlite v1.11.0
 	go.etcd.io/etcd/client/v3 v3.6.11
 	google.golang.org/protobuf v1.36.12
