@@ -12,8 +12,8 @@ require (
 	go.etcd.io/etcd/client/v3 v3.6.11
 	google.golang.org/protobuf v1.36.12
 	gorm.io/gorm v1.31.1
-	k8s.io/apimachinery v0.37.1
-	k8s.io/client-go v0.37.1
+	k8s.io/apimachinery v0.37.2
+	k8s.io/client-go v0.37.2
 )
 
 require (
