@@ -1,6 +1,6 @@
 module github.com/agntcy/dir-runtime/server
 
-go 1.27.2
+go 1.27.3
 
 // Replace local modules
 replace (
@@ -11,7 +11,7 @@ replace (
 require (
 	github.com/agntcy/dir-runtime/store v1.5.0
 	github.com/agntcy/dir-runtime/utils v1.5.0
-	github.com/agntcy/dir/api v1.8.0
+	github.com/agntcy/dir/api v1.9.0
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
@@ -34,7 +34,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.31.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.33.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -64,8 +64,8 @@ require (
 	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260921155816-b14227669459 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260918162117-cecb64721679 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20261026165753-2ffab32bce7e // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261019180522-ce908d29299b // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gorm.io/gorm v1.31.1 // indirect
 	k8s.io/apimachinery v0.37.1 // indirect

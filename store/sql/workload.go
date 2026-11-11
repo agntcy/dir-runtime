@@ -42,7 +42,9 @@ func newWorkloadRecord(runtimeWorkload *runtimev1.Workload) (*workloadRecord, er
 func (w *workloadRecord) ToRuntimeWorkload() (*runtimev1.Workload, error) {
 	workload := &runtimev1.Workload{}
 
-	err := protojson.Unmarshal(w.Payload, workload)
+	// Payloads written by older versions may hold fields that Workload has since
+	// dropped (such as addresses and ports); skip them instead of failing.
+	err := protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(w.Payload, workload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal workload payload for %s: %w", w.ID, err)
 	}
