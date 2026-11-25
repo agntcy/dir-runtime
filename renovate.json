@@ -128,7 +128,7 @@
     }
   ],
   "postUpdateOptions": [
-    "gomodTidy",
+    "gomodTidyAll",
     "gomodUpdateImportPaths"
   ],
   "prConcurrentLimit": 20,
