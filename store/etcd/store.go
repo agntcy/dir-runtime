@@ -143,7 +143,7 @@ func (s *store) GetWorkload(ctx context.Context, workloadID string) (*runtimev1.
 
 	// Unmarshal workload
 	workload := &runtimev1.Workload{}
-	if err := json.Unmarshal(resp.Kvs[0].Value, &workload); err != nil {
+	if err := json.Unmarshal(resp.Kvs[0].GetValue(), &workload); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal workload: %w", err)
 	}
 
@@ -160,7 +160,7 @@ func (s *store) ListWorkloadIDs(ctx context.Context) (map[string]struct{}, error
 	ids := make(map[string]struct{})
 
 	for _, kv := range resp.Kvs {
-		id := strings.TrimPrefix(string(kv.Key), s.workloadsPrefix)
+		id := strings.TrimPrefix(string(kv.GetKey()), s.workloadsPrefix)
 		ids[id] = struct{}{}
 	}
 
@@ -177,12 +177,12 @@ func (s *store) ListWorkloads(ctx context.Context) ([]*runtimev1.Workload, error
 	var workloads []*runtimev1.Workload
 
 	for _, kv := range resp.Kvs {
-		key := string(kv.Key)
+		key := string(kv.GetKey())
 		workloadID := strings.TrimPrefix(key, s.workloadsPrefix)
 
 		workload := &runtimev1.Workload{}
 
-		err := json.Unmarshal(kv.Value, &workload)
+		err := json.Unmarshal(kv.GetValue(), &workload)
 		if err != nil {
 			logger.Error("failed to parse workload", "workload", workloadID, "error", err)
 
@@ -212,18 +212,18 @@ func (s *store) WatchWorkloads(ctx context.Context, handler func(workload *runti
 			}
 
 			for _, event := range watchResp.Events {
-				switch event.Type {
+				switch event.GetType() {
 				case clientv3.EventTypePut:
 					var workload *runtimev1.Workload
 
-					err := json.Unmarshal(event.Kv.Value, &workload)
+					err := json.Unmarshal(event.GetKv().GetValue(), &workload)
 					if err != nil {
 						continue
 					}
 
 					handler(workload, false)
 				case clientv3.EventTypeDelete:
-					workloadID := strings.TrimPrefix(string(event.Kv.Key), s.workloadsPrefix)
+					workloadID := strings.TrimPrefix(string(event.GetKv().GetKey()), s.workloadsPrefix)
 					handler(&runtimev1.Workload{Id: workloadID}, true)
 				}
 			}
