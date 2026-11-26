@@ -50,3 +50,60 @@ func TestTCPLocators(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeLocators(t *testing.T) {
+	tests := []struct {
+		name  string
+		lists [][]*runtimev1.WorkloadLocator
+		want  []*runtimev1.WorkloadLocator
+	}{
+		{
+			name: "sorted by protocol then url",
+			lists: [][]*runtimev1.WorkloadLocator{
+				{{Protocol: LocatorProtocolTCP, Url: "tcp://host:9999"}},
+				{
+					{Protocol: LocatorProtocolSLIM, Url: "slim://node:47357/agntcy/shadi/b-a2a"},
+					{Protocol: LocatorProtocolSLIM, Url: "slim://node:47357/agntcy/shadi/a-a2a"},
+				},
+			},
+			want: []*runtimev1.WorkloadLocator{
+				{Protocol: LocatorProtocolSLIM, Url: "slim://node:47357/agntcy/shadi/a-a2a"},
+				{Protocol: LocatorProtocolSLIM, Url: "slim://node:47357/agntcy/shadi/b-a2a"},
+				{Protocol: LocatorProtocolTCP, Url: "tcp://host:9999"},
+			},
+		},
+		{
+			name: "same protocol and url collapses",
+			lists: [][]*runtimev1.WorkloadLocator{
+				{{Protocol: LocatorProtocolTCP, Url: "tcp://host:9999"}},
+				{{Protocol: LocatorProtocolTCP, Url: "tcp://host:9999"}},
+			},
+			want: []*runtimev1.WorkloadLocator{{Protocol: LocatorProtocolTCP, Url: "tcp://host:9999"}},
+		},
+		{
+			// One endpoint can serve two bindings, and the locator-protocol filter treats
+			// those as different ways in, so the URL alone must not be the key.
+			name: "same url under two protocols is kept twice",
+			lists: [][]*runtimev1.WorkloadLocator{{
+				{Protocol: "jsonrpc", Url: "http://host:8080"},
+				{Protocol: "http+json", Url: "http://host:8080"},
+			}},
+			want: []*runtimev1.WorkloadLocator{
+				{Protocol: "http+json", Url: "http://host:8080"},
+				{Protocol: "jsonrpc", Url: "http://host:8080"},
+			},
+		},
+		{name: "nothing to merge", lists: nil, want: nil},
+		{
+			name:  "only empty lists",
+			lists: [][]*runtimev1.WorkloadLocator{nil, {}},
+			want:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, MergeLocators(tt.lists...))
+		})
+	}
+}

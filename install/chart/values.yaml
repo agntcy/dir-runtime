@@ -120,8 +120,12 @@ discovery:
       a2a:
         enabled: true
         timeout: 5s
+        # Keep in sync with a2a.DefaultDiscoveryPaths. An explicit value here
+        # replaces that default rather than extending it, so a path missing
+        # from this list is never probed.
         paths:
-          - /.well-known/agent.json
+          - /.well-known/agent-card.json
+          - /.well-known/card.json
         label_key: org.agntcy/agent-type
         label_value: a2a
       oasf:

@@ -104,6 +104,15 @@ func (r *resolver) Apply(ctx context.Context, workload *runtimev1.Workload, resu
 
 	workload.Services.A2A = data
 
+	// Promote the bindings the card advertises into locators, so the workload carries the
+	// addresses it answers on and not only the ones the runtime could observe. Promoted
+	// locators join the observed ones rather than replacing them: CanResolve gates on an
+	// HTTP-capable origin, and dropping those would leave the workload permanently
+	// unresolvable.
+	if card, ok := result.(map[string]any); ok {
+		workload.Locators = types.MergeLocators(workload.GetLocators(), cardLocators(card))
+	}
+
 	return nil
 }
 
