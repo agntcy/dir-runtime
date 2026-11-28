@@ -1,13 +1,13 @@
 module github.com/agntcy/dir-runtime/store
 
-go 1.27.3
+go 1.27.4
 
 // Replace local modules
 replace github.com/agntcy/dir-runtime/utils => ../utils
 
 require (
 	github.com/agntcy/dir-runtime/utils v1.7.0
-	github.com/agntcy/dir/api v1.9.0
+	github.com/agntcy/dir/api v1.9.2
 	github.com/glebarez/sqlite v1.11.0
 	go.etcd.io/etcd/client/v3 v3.7.4
 	google.golang.org/protobuf v1.36.12
